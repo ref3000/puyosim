@@ -2,16 +2,18 @@
   <div id="app">
     <img src="./assets/logo.png">
     <hello></hello>
+    <field></field>
   </div>
 </template>
 
 <script>
-import Hello from './components/Hello'
+import Test from './assets/test.js'
+import Field from './components/Field'
 
 export default {
   name: 'app',
   components: {
-    Hello
+    Field
   }
 }
 </script>
@@ -22,7 +24,7 @@ export default {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
+  color: #ffff00;
   margin-top: 60px;
 }
 </style>
