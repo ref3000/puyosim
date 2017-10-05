@@ -1,14 +1,12 @@
+import GameManager from '../libs/GameManager'
+let gm = new GameManager()
+
 export default {
-  debug: true,
   state: {
-    message: 'Hello!'
+    title: 'Hello!',
+    opsPos: gm.opsPos
   },
-  setMessage (newValue) {
-    if (this.debug) console.log('setMessage triggered with', newValue)
-    this.state.message = newValue
-  },
-  clearMessageAction () {
-    if (this.debug) console.log('clearMessageAction triggered')
-    this.state.message = ''
+  setTitle (title) {
+    this.state.title = title
   }
 }
