@@ -2,11 +2,14 @@
   <div id="app">
     <div id="top">
     </div>
-    <div id="left">
-      <puyo-field></puyo-field>
-    </div>
-    <div id="right">
-      <div id="dummy">{{state.title}}</div>
+    <div id="mid">
+      <img id="puyo-field" src="./assets/puyo_field_back.png">
+        <img class="puyo" :src='opsAxisSrc' :style='opsAxisStyle'></img>
+        <img class="puyo" :src='opsSubSrc' :style='opsSubStyle'></img>
+      </img>
+      <div id="sub-field">
+        <div id="dummy">{{state.title}}</div>
+      </div>
     </div>
     <div id="bottom">
       <div class="bt" v-on:touchstart="b_left" v-on:mousedown="b_left" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">←</div>
@@ -20,7 +23,8 @@
 
 <script>
 import store from './store/Store'
-import PuyoField from './components/PuyoField'
+import util from './store/libs/PuyoUtil'
+// import PuyoField from './components/PuyoField'
 
 function isClickDownEvent (e) {
   let tapEventType = window.ontouchstart === null ? 'touchstart' : 'mousedown'
@@ -31,6 +35,7 @@ function isClickDownEvent (e) {
 //   return e.type === tapEventType
 // }
 
+// TODO:mvvmに反してるので使わないように修正する
 function setTouchStyle (e) {
   e.target.classList.add('b_touched')
 }
@@ -38,14 +43,38 @@ function setUntouchStyle (e) {
   e.target.classList.remove('b_touched')
 }
 
+function puyoXpx (posX) {
+  return 32 * (posX - 1)
+}
+function puyoYpx (posY) {
+  return 32 * (13 - posY)
+}
+
 export default {
   name: 'app',
   components: {
-    PuyoField
+    // PuyoField
   },
   data: function () {
     return {
       state: store.state
+    }
+  },
+  computed: {
+    opsAxisSrc: function () {
+      return require('./assets/puyo_g.png')
+    },
+    opsSubSrc: function () {
+      return require('./assets/puyo_b.png')
+    },
+    opsAxisStyle: function () {
+      let opsX = this.state.ops.pos.x
+      let opsY = this.state.ops.pos.y
+      return 'left:' + puyoXpx(opsX) + 'px; top:' + puyoYpx(opsY) + 'px'
+    },
+    opsSubStyle: function () {
+      let subPos = util.subPos(this.state.ops.pos, this.state.ops.dir)
+      return 'left:' + puyoXpx(subPos.x) + 'px; top:' + puyoYpx(subPos.y) + 'px'
     }
   },
   watch: {
@@ -64,53 +93,31 @@ export default {
     b_left: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
-      store.setTitle('left')
+      store.moveLeft()
     },
     b_right: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
-      store.setTitle('right')
+      store.moveRight()
     },
     b_down: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
-      store.setTitle('down')
+      store.setDown()
     },
     b_turnLeft: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
-      store.setTitle('tl')
+      store.turnLeft()
     },
     b_turnRight: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
-      store.setTitle('tr')
+      store.turnRight()
     },
     b_untouch: function (e) {
       setUntouchStyle(e)
     }
-    // b_touchend: function (e) {
-    //   console.log(e.target)
-    //   console.log('touch end!')
-    //   if (!isClickUpEvent(e)) return
-    //   clickUp(e)
-    // },
-    // b_mousedown: function (e) {
-    //   console.log(e.target)
-    //   console.log('mouse down!')
-    //   if (!isClickDownEvent(e)) return
-    //   clickDown(e)
-    // },
-    // b_mouseup: function (e) {
-    //   console.log(e.target)
-    //   console.log('mouse up!')
-    //   if (!isClickUpEvent(e)) return
-    //   clickUp(e)
-    // },
-    // b_mouseout: function (e) {
-    //   // console.log(e.target)
-    //   // console.log('mouse out!')
-    // }
   }
 }
 </script>
@@ -135,39 +142,57 @@ export default {
   background-color:azure;
 }
 
-#left {
+#mid {
   margin: 0;
-  position: absolute;
-  width: 192px;
+  position: relative;
+  display: flex;
+  width: 320px;
   height: 416px;
-  left: 0;
-  background-color:burlywood;
-}
-
-#right {
-  margin: 0;
-  position: absolute;
-  width: 128px;
-  height: 416px;
-  left: 192px;
-  background-color:aliceblue;
+  background-color:azure;
 }
 
 #bottom {
   margin: 0;
-  position: absolute;
+  position: relative;
   width: 320px;
-  height: auto;
-  top: 446px;
+  height: 200px;
   background-color:aliceblue;
 }
 
-#dummy {
+#puyo-field {
+  margin: 0;
+  position: relative;
+  width: 192px;
+  height: 416px;
+}
+
+#sub-field {
   margin: 0;
   position: relative;
   width: 128px;
-  height: 100px;
-  background-color:cadetblue;
+  height: auto;
+  background-color:aliceblue;
+}
+
+#ops-axis {
+  margin: 0;
+  position: absolute;
+  width: 32px;
+  height: 32px;
+}
+
+#ops-sub {
+  margin: 0;
+  position: absolute;
+  width: 32px;
+  height: 32px;
+}
+
+.puyo {
+  margin: 0;
+  position: absolute;
+  width: 32px;
+  height: 32px;
 }
 
 .bt {
