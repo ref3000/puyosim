@@ -14,8 +14,12 @@ class Pos {
 
 export default class {
   constructor (name) {
-    // 操作ぷよ関連
+    // 操作関連
     this.opsPos = new Pos(3, 12)
+    this.opsDir = 0
+    this.selectPos = new Pos(-1, -1)
+    // 手順関連
+    this.nextPuyos = []
     // this.dir = 0    // 向き
     // this.turn = 1   // 何手目か
     // this.select_pos = new Pos() // どこを選択しているか

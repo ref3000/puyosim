@@ -1,6 +1,6 @@
 <template>
   <div class="puyoField">
-    <div>{{ state.message }}</div>
+    <div>{{ state }}</div>
   </div>
 </template>
 
