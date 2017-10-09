@@ -1,4 +1,4 @@
-import Puyo from './Puyo'
+import Puyo from './puyo/Puyo'
 
 export default {
   subPos: function (axisPos, axisDir) {

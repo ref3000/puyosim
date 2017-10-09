@@ -7,6 +7,8 @@
         <img class="puyo" :src='opsAxisSrc' :style='opsAxisStyle'></img>
         <img class="puyo" :src='opsSubSrc' :style='opsSubStyle'></img>
       </img>
+      <img class="puyo" v-for="obj in state.puyoObjs" :src='puyoSrc(obj)' :style='puyoStyle(obj)'>
+      </img>
       <div id="sub-field">
         <div id="dummy">{{state.title}}</div>
       </div>
@@ -24,7 +26,7 @@
 <script>
 import store from './store/Store'
 import util from './store/libs/PuyoUtil'
-// import PuyoField from './components/PuyoField'
+import Puyo from './store/libs/puyo/Puyo'
 
 function isClickDownEvent (e) {
   let tapEventType = window.ontouchstart === null ? 'touchstart' : 'mousedown'
@@ -117,6 +119,27 @@ export default {
     },
     b_untouch: function (e) {
       setUntouchStyle(e)
+    },
+    puyoSrc: function (obj) {
+      switch (obj.kind) {
+        case Puyo.Kind.RED:
+          return require('./assets/puyo_r.png')
+        case Puyo.Kind.GREEN:
+          return require('./assets/puyo_g.png')
+        case Puyo.Kind.BLUE:
+          return require('./assets/puyo_b.png')
+        case Puyo.Kind.YELLOW:
+          return require('./assets/puyo_y.png')
+        case Puyo.Kind.OJAMA:
+          return require('./assets/puyo_o.png')
+        case Puyo.Kind.WALL:
+          return require('./assets/puyo_c.png') // TODO: 画像作成
+      }
+      return require('./assets/puyo_c.png')
+    },
+    puyoStyle: function (obj) {
+      let vi = (obj.kind === Puyo.Kind.BRANK) ? 'hidden' : 'visible'
+      return 'left:' + puyoXpx(obj.pos.x) + 'px; top:' + puyoYpx(obj.pos.y) + 'px; visibility:' + vi
     }
   }
 }

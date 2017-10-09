@@ -1,28 +1,85 @@
-import Puyo from './libs/Puyo'
-// import GameManager from './libs/GameManager'
-// let gm = new GameManager()
+import Puyo from './libs/puyo/Puyo'
+// import Util from './libs/PuyoUtil'
+import Game from './libs/puyo/Game'
+let game = new Game()
+console.log(game)
+
+// let field = new Puyo.Field()
+// let next = new Puyo.Next()
+
+// function nextArray () {
+//   let na = []
+//   for (let i = 0; i < next.size(); i++) {
+//     // let axis = next[i].getAxis()
+//     // let sub = next[i].getSub()
+//   }
+//   return na
+// }
+
+let state = {
+  title: 'Hello!',
+  ops: {
+    pos: {
+      x: -1,
+      y: -1
+    },
+    dir: -1
+  },
+  puyoObjs: [],
+  nextArray: []
+}
+
+function updateField () {
+  let objs = []
+  for (let y = game.field.Height(); y > 0; y--) {
+    for (let x = 1; x <= game.field.Width(); x++) {
+      let kind = game.field.get(new Puyo.Pos(x, y))
+      objs.push({
+        pos: new Puyo.Pos(x, y),
+        kind: kind
+      })
+    }
+  }
+  state.puyoObjs = objs
+}
+
+function updateOps () {
+  state.ops = {
+    pos: {
+      x: game.ops.pos.x,
+      y: game.ops.pos.y
+    },
+    dir: game.ops.dir
+  }
+}
+
+updateField()
+updateOps()
 
 export default {
-  state: {
-    title: 'Hello!',
-    ops: {
-      pos: new Puyo.Pos(3, 12),
-      dir: 0
-    }
-  },
+  state: state,
   setTitle (title) {
     this.state.title = title
   },
-  turnLeft: function () {
-    this.state.ops.dir = (this.state.ops.dir + 3) % 4
+  turnLeft () {
+    game.rotateLeft()
+    updateOps()
   },
-  turnRight: function () {
-    this.state.ops.dir = (this.state.ops.dir + 1) % 4
+  turnRight () {
+    game.rotateRight()
+    updateOps()
   },
-  moveLeft: function () {
-    this.state.ops.pos.x = this.state.ops.pos.x - 1
+  moveLeft () {
+    game.moveLeft()
+    updateOps()
   },
-  moveRight: function () {
-    this.state.ops.pos.x = this.state.ops.pos.x + 1
+  moveRight () {
+    game.moveRight()
+    updateOps()
+  },
+  setDown () {
+    game.setDown()
+    updateOps()
+    updateField()
   }
 }
