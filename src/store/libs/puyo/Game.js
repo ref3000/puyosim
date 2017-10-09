@@ -3,7 +3,6 @@ import Puyo from './Puyo'
 class Game {
   constructor () {
     this.field = new Puyo.Field()
-    console.log(this.field)
     this.next = new Puyo.Next()
     this.ops = {
       pos: new Puyo.Pos(3, 12),
@@ -11,7 +10,6 @@ class Game {
     }
     this.turn = 1
   }
-  // getter
   axisPos () {
     return this.ops.pos
   }
@@ -50,7 +48,10 @@ class Game {
     }
     this.field.set(ap, this.next.get(this.turn).axis)
     this.field.set(sp, this.next.get(this.turn).sub)
-    this.field.fall()
+    if (!this.field.fall()) return
+    this.ops.pos = new Puyo.Pos(3, 12)
+    this.ops.dir = 0
+    this.turn++
   }
 }
 

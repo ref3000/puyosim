@@ -2,19 +2,6 @@ import Puyo from './libs/puyo/Puyo'
 // import Util from './libs/PuyoUtil'
 import Game from './libs/puyo/Game'
 let game = new Game()
-console.log(game)
-
-// let field = new Puyo.Field()
-// let next = new Puyo.Next()
-
-// function nextArray () {
-//   let na = []
-//   for (let i = 0; i < next.size(); i++) {
-//     // let axis = next[i].getAxis()
-//     // let sub = next[i].getSub()
-//   }
-//   return na
-// }
 
 let state = {
   title: 'Hello!',
@@ -26,7 +13,21 @@ let state = {
     dir: -1
   },
   puyoObjs: [],
-  nextArray: []
+  nextPuyoPairs: [],
+  turn: -1
+}
+
+function updateNext () {
+  let na = []
+  for (let i = 0; i < game.next.size(); i++) {
+    let axis = game.next.get(i).axis
+    let sub = game.next.get(i).sub
+    na.push({
+      axis: axis,
+      sub: sub
+    })
+  }
+  state.nextPuyoPairs = na
 }
 
 function updateField () {
@@ -49,12 +50,21 @@ function updateOps () {
       x: game.ops.pos.x,
       y: game.ops.pos.y
     },
-    dir: game.ops.dir
+    dir: game.ops.dir,
+    kind: game.ops
   }
 }
 
+function updateInfo () {
+  state.turn = game.turn
+}
+
+updateNext()
 updateField()
 updateOps()
+updateInfo()
+
+console.log(state)
 
 export default {
   state: state,
@@ -81,5 +91,6 @@ export default {
     game.setDown()
     updateOps()
     updateField()
+    updateInfo()
   }
 }

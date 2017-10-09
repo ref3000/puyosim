@@ -25,7 +25,7 @@
 
 <script>
 import store from './store/Store'
-import util from './store/libs/PuyoUtil'
+import util from './store/libs/puyo/Util'
 import Puyo from './store/libs/puyo/Puyo'
 
 function isClickDownEvent (e) {
@@ -52,10 +52,45 @@ function puyoYpx (posY) {
   return 32 * (13 - posY)
 }
 
+function keydown (e) {
+  var code = e.keyCode
+  switch (code) {
+    case 37: // ←キー
+      store.moveLeft()
+      e.preventDefault()
+      return
+    case 39: // →キー
+      store.moveRight()
+      e.preventDefault()
+      return
+    case 38: // ↑キー
+      e.preventDefault()
+      return
+    case 40: // ↓キー
+      store.setDown()
+      e.preventDefault()
+      return
+    case 88: // x
+      store.turnRight()
+      e.preventDefault()
+      return
+    case 90: // z
+      store.turnLeft()
+      e.preventDefault()
+      return
+    case 67: // c
+      return
+    case 68: // d
+      return
+  }
+}
 export default {
   name: 'app',
   components: {
     // PuyoField
+  },
+  mounted: function () {
+    window.addEventListener('keydown', keydown, true)
   },
   data: function () {
     return {
@@ -64,10 +99,12 @@ export default {
   },
   computed: {
     opsAxisSrc: function () {
-      return require('./assets/puyo_g.png')
+      let pp = this.state.nextPuyoPairs[this.state.turn]
+      return this.puyoSrc({kind: pp.axis})
     },
     opsSubSrc: function () {
-      return require('./assets/puyo_b.png')
+      let pp = this.state.nextPuyoPairs[this.state.turn]
+      return this.puyoSrc({kind: pp.sub})
     },
     opsAxisStyle: function () {
       let opsX = this.state.ops.pos.x

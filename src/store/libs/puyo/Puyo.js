@@ -17,37 +17,21 @@ function isNull (obj) {
   return obj == null
 }
 
-function className (obj) {
-  if (obj == null) return ''
-  if (obj.constructor == null) return ''
-  return obj.constructor.name
-}
-
-function isPuyo (obj) {
-  return className(obj) === 'Puyo'
-}
-
-function printError (mes, obj) {
-  console.error(mes, obj)
-}
-
 // クラス定義
 class PuyoPair {
   constructor (axis, sub) {
-    this.axis = isNull(axis) ? new Puyo() : axis
-    this.sub = isNull(sub) ? new Puyo() : sub
-    if (!isPuyo(this.axis)) printError('PuyoPair: type error', axis)
-    if (!isPuyo(this.sub)) printError('PuyoPair: type error', sub)
+    this.axis = isNull(axis) ? Kind.BRANK : axis
+    this.sub = isNull(sub) ? Kind.BRANK : sub
   }
 }
 
 class Next {
   constructor () {
     this._random = new Random()
-    this._size = 1024
+    this._size = 1000
     this._puyos = []
     for (let i = 0; i < this._size; i++) {
-      this._puyos.push(new PuyoPair(new Puyo(this._nextKind()), new Puyo(this._nextKind())))
+      this._puyos.push(new PuyoPair(this._nextKind(), this._nextKind()))
     }
   }
   size () {
@@ -78,29 +62,29 @@ class Field {
   constructor () {
     this.height = 13
     this.width = 6
-    this._value = []
+    this._field = []
     for (let y = 0; y < this.height; y++) {
       let line = []
       for (let x = 0; x < this.width; x++) {
-        line.push(new Puyo(Kind.BRANK))
+        line.push(Kind.BRANK)
       }
-      this._value.push(line)
+      this._field.push(line)
     }
   }
   isBrank (pos) {
-    return this.get(pos).kind === Kind.BRANK
+    return this.get(pos) === Kind.BRANK
   }
   get (pos) {
     if (pos.y < 1 || pos.y > this.height || pos.x < 1 || pos.x > this.width) {
       return Kind.WALL
     }
-    return this._value[pos.y - 1][pos.x - 1]
+    return this._field[pos.y - 1][pos.x - 1]
   }
-  set (pos, puyo) {
+  set (pos, kind) {
     if (pos.y < 1 || pos.y > this.height || pos.x < 1 || pos.x > this.width) {
       return
     }
-    this._value[pos.y - 1][pos.x - 1] = puyo.kind
+    this._field[pos.y - 1][pos.x - 1] = kind
   }
   fall () {
     let flag = false // 落下が発生したかどうか
@@ -120,7 +104,7 @@ class Field {
   canFall () {
     for (let x = 1; x <= this.width; x++) {
       for (let y = 2; y <= this.height; y++) {
-        if (this.get(new Pos(x, y - 1)) === Kind.BRANK && this.get(new Pos(x, y)) !== Kind.BRANK) return true
+        if (this.isBrank(new Pos(x, y - 1)) && !this.isBrank(new Pos(x, y))) return true
       }
     }
     return false
@@ -136,7 +120,6 @@ class Field {
 export default {
   Kind: Kind,
   Pos: Pos,
-  Puyo: Puyo,
   Next: Next,
   Field: Field
 }
