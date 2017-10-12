@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <div id="top">
+      <img id="hun" :class="{openHamburger: state.hamburger}" src="./assets/hun02.png" v-on:touchstart="hamburger" v-on:mousedown="hamburger"></img>
     </div>
     <div id="mid">
       <img id="puyo-field" src="./assets/puyo_field_back.png">
@@ -10,7 +11,25 @@
       <img class="puyo" v-for="obj in state.puyoObjs" :src='puyoSrc(obj)' :style='puyoStyle(obj)'>
       </img>
       <div id="sub-field">
-        <div id="dummy">{{state.title}}</div>
+        <div id="next-area">
+          <img class="puyo" v-for="(obj, index) in nextPuyos" :src='puyoSrc(obj)' :style='nextPuyoStyle(obj)' v-on:touchstart="toggleNext($event, index)" v-on:mousedown="toggleNext($event, index)">
+        </div>
+        <div id="ojama-image-area">
+        </div>
+        <div id="info-area">
+          <div id="turn-view">{{state.turn}}手目</div>
+          <div id="chain-view">{{state.chain}}連鎖 {{state.score}}点</div>
+          <div id="score-view">合計 {{state.sumScore}}点</div>
+        </div>
+        <div id="chart-area">
+          <div v-for="(obj, index) in state.history" class="chart-tile" :class="{activeTile: index===state.turn}" v-on:touchstart="b_chart($event, index)" v-on:mousedown="b_chart($event, index)">
+            <div class="chart-num">{{index + 1}}</div>
+            <img class="puyo" :src='puyoHistoryAxisSrc(obj, index)' style="left: 28px">
+            <img class="puyo" :src='puyoHistorySubSrc(obj, index)' style='left: 60px'>
+            <div class="chart-pos">{{(obj.x>0&&obj.x<7)?obj.x:''}}</div>
+            <div class="chart-dir">{{(obj.dir===0)?'↑':(obj.dir===1)?'→':(obj.dir===2)?'↓':(obj.dir===3)?'←':''}}</div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="bottom">
@@ -19,6 +38,18 @@
       <div class="bt" v-on:touchstart="b_right" v-on:mousedown="b_right" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">→</div>
       <div class="bt" v-on:touchstart="b_turnLeft" v-on:mousedown="b_turnLeft" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">L</div>
       <div class="bt" v-on:touchstart="b_turnRight" v-on:mousedown="b_turnRight" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">R</div>
+      <button v-on:click="b_debug">step</button>
+      <canvas id="output" width="320" height="418"></canvas>
+    </div>
+    <div id="menu" v-if="state.hamburger">
+      <div id="menu_back"></div>
+      <div id="menu_area_back"></div>
+      <div id="menu_area">
+        <div class="menu_tile" v-on:touchstart="tReset" v-on:mousedown="tReset">初手に戻す</div>
+        <div class="menu_tile" v-on:touchstart="tInit" v-on:mousedown="tInit">ツモを変えてリセット</div>
+        <div class="menu_tile" v-on:touchstart="tDownload" v-on:mousedown="tDownload" href="#" download="test.txt">set</div>
+        <div class="menu_tile" id="download" href="#" download="test.txt">download</div>
+      </div>
     </div>
   </div>
 </template>
@@ -27,6 +58,13 @@
 import store from './store/Store'
 import util from './store/libs/puyo/Util'
 import Puyo from './store/libs/puyo/Puyo'
+import * as Gif from './vendor/gif'
+
+console.log(Gif)
+console.log(Gif.constructor)
+console.log(new Gif())
+let g = new Gif({workers: 2, quality: 10})
+console.log(g)
 
 function isClickDownEvent (e) {
   let tapEventType = window.ontouchstart === null ? 'touchstart' : 'mousedown'
@@ -69,6 +107,7 @@ function keydown (e) {
     case 40: // ↓キー
       store.setDown()
       e.preventDefault()
+      goBottom()
       return
     case 88: // x
       store.turnRight()
@@ -81,16 +120,33 @@ function keydown (e) {
     case 67: // c
       return
     case 68: // d
+      // store.nextStep()
+      return
+    case 69: // e
+      // console.log(store.state)
       return
   }
 }
+
+// TODO: つらい vueらしい方法に変更
+function goBottom () {
+  setTimeout(function () {
+    let el = document.getElementById('chart-area')
+    el.scrollTop = el.scrollHeight
+  }, 20)
+}
+
 export default {
   name: 'app',
   components: {
     // PuyoField
   },
   mounted: function () {
+    document.title = store.state.title
     window.addEventListener('keydown', keydown, true)
+    window.addEventListener('touchend', event => {
+      event.preventDefault()
+    }, false)
   },
   data: function () {
     return {
@@ -109,11 +165,36 @@ export default {
     opsAxisStyle: function () {
       let opsX = this.state.ops.pos.x
       let opsY = this.state.ops.pos.y
-      return 'left:' + puyoXpx(opsX) + 'px; top:' + puyoYpx(opsY) + 'px'
+      let vi = this.state.ops.available ? 'visible' : 'hidden'
+      return 'left:' + puyoXpx(opsX) + 'px; top:' + puyoYpx(opsY) + 'px; visibility:' + vi
     },
     opsSubStyle: function () {
       let subPos = util.subPos(this.state.ops.pos, this.state.ops.dir)
-      return 'left:' + puyoXpx(subPos.x) + 'px; top:' + puyoYpx(subPos.y) + 'px'
+      let vi = this.state.ops.available ? 'visible' : 'hidden'
+      return 'left:' + puyoXpx(subPos.x) + 'px; top:' + puyoYpx(subPos.y) + 'px; visibility:' + vi
+    },
+    nextPuyos: function () {
+      let objs = []
+      for (let i = 0; i < this.state.nextDisplay.length; i++) {
+        let nextLen = this.state.nextPuyoPairs.length
+        let nextPos = (this.state.turn + i + 1) % nextLen
+        let puyoPair = this.state.nextPuyoPairs[nextPos]
+        let axisKind = puyoPair.axis
+        let subKind = puyoPair.sub
+        if (!this.state.nextDisplay[i].axis) axisKind = Puyo.Kind.WALL
+        if (!this.state.nextDisplay[i].sub) subKind = Puyo.Kind.WALL
+        objs.push({
+          kind: subKind,
+          x: 32 * i,
+          y: 0
+        })
+        objs.push({
+          kind: axisKind,
+          x: 32 * i,
+          y: 32
+        })
+      }
+      return objs
     }
   },
   watch: {
@@ -123,9 +204,6 @@ export default {
         document.title = obj.title
       },
       deep: true
-    },
-    title: function (v) {
-      console.log(v)
     }
   },
   methods: {
@@ -143,6 +221,7 @@ export default {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.setDown()
+      goBottom()
     },
     b_turnLeft: function (e) {
       if (!isClickDownEvent(e)) return
@@ -157,7 +236,22 @@ export default {
     b_untouch: function (e) {
       setUntouchStyle(e)
     },
+    b_chart: function (e, i) {
+      if (!isClickDownEvent(e)) return
+      store.moveTurn(i)
+    },
+    b_debug: function (e) {
+      let canvas = document.getElementById('output')
+      let ctx = canvas.getContext('2d')
+      let img = new Image()
+      img.src = require('./assets/puyo_c.png')
+      ctx.drawImage(img, 0, 0)
+      let data = canvas.toDataURL('image/png')
+      console.log(data)
+      document.getElementById('output').href = data
+    },
     puyoSrc: function (obj) {
+      if (obj.state === 'extinction') return require('./assets/puyo_c.png')
       switch (obj.kind) {
         case Puyo.Kind.RED:
           return require('./assets/puyo_r.png')
@@ -170,13 +264,57 @@ export default {
         case Puyo.Kind.OJAMA:
           return require('./assets/puyo_o.png')
         case Puyo.Kind.WALL:
-          return require('./assets/puyo_c.png') // TODO: 画像作成
+          return require('./assets/wall01.png')
       }
       return require('./assets/puyo_c.png')
     },
+    puyoHistoryAxisSrc: function (obj, index) {
+      let pp = this.state.nextPuyoPairs[index]
+      return this.puyoSrc({kind: pp.axis})
+    },
+    puyoHistorySubSrc: function (obj, index) {
+      let pp = this.state.nextPuyoPairs[index]
+      return this.puyoSrc({kind: pp.sub})
+    },
     puyoStyle: function (obj) {
-      let vi = (obj.kind === Puyo.Kind.BRANK) ? 'hidden' : 'visible'
+      let vi = (obj.kind === Puyo.Kind.BRANK && obj.state !== 'extinction') ? 'hidden' : 'visible'
       return 'left:' + puyoXpx(obj.pos.x) + 'px; top:' + puyoYpx(obj.pos.y) + 'px; visibility:' + vi
+    },
+    nextPuyoStyle: function (obj) {
+      let vi = (obj.kind === Puyo.Kind.BRANK && obj.state !== 'extinction') ? 'hidden' : 'visible'
+      return 'left:' + obj.x + 'px; top:' + obj.y + 'px; visibility:' + vi
+    },
+    toggleNext: function (e, index) { // TODO: index を使うのは妥協なので、良い方法を考える
+      if (!isClickDownEvent(e)) return
+      store.toggleNextDisplay(Math.floor(index / 2), (index % 2) === 1)
+    },
+    hamburger: function (e) {
+      if (!isClickDownEvent(e)) return
+      store.toggleHamburger()
+    },
+    tInit: function (e) {
+      if (!isClickDownEvent(e)) return
+      store.init()
+      store.toggleHamburger()
+    },
+    tReset: function (e) {
+      if (!isClickDownEvent(e)) return
+      store.moveTurn(0)
+      store.toggleHamburger()
+    },
+    tDownload: function (e) {
+      let content = 'あいうえお'
+      let blob = new Blob([content], {'type': 'text/plain'})
+      console.log(blob)
+      console.log(window.navigator.msSaveBlob)
+      console.log(window.URL)
+      console.log(window.URL.createObjectURL(blob))
+      if (window.navigator.msSaveBlob) {
+        window.navigator.msSaveBlob(blob, 'test.txt')
+        window.navigator.msSaveOrOpenBlob(blob, 'test.txt')
+      } else {
+        document.getElementById('download').href = window.URL.createObjectURL(blob)
+      }
     }
   }
 }
@@ -200,6 +338,15 @@ export default {
   width: 320px;
   height: 30px;
   background-color:azure;
+}
+
+#hun {
+  position: absolute;
+  left: 288px;
+}
+
+.openHamburger {
+  background-color:#bbcccc;
 }
 
 #mid {
@@ -232,6 +379,95 @@ export default {
   width: 128px;
   height: auto;
   background-color:aliceblue;
+}
+
+#next-area {
+  margin: 0;
+  position: relative;
+  width: 128px;
+  height: 64px;
+  background-color: #999999;
+}
+
+#ojama-image-area {
+  margin: 0;
+  position: relative;
+  width: 128px;
+  height: 32px;
+  background-color: #666666;
+}
+
+#info-area {
+  margin: 0;
+  position: relative;
+  width: 128px;
+  height: 64px;
+  background-color: #e0fcf9;
+}
+
+#turn-view {
+  margin: 0;
+  position: relative;
+  width: 128px;
+  height: 20px;
+}
+
+#chain-view {
+  margin: 0;
+  position: relative;
+  width: 128px;
+  height: 20px;
+}
+
+#score-view {
+  margin: 0;
+  position: relative;
+  width: 128px;
+  height: 20px;
+}
+
+#chart-area {
+  margin: 0;
+  position: relative;
+  overflow: auto;
+  width: 128px;
+  height: 256px;
+  background-color: #aabbcc;
+}
+
+.chart-tile {
+  margin: 0;
+  position: relative;
+  width: 126px;
+  height: 30px;
+  border: inset 1px;
+  background-color: #ddeedd;
+}
+
+.activeTile {
+  background-color: #ffdc5e;
+  border-color: #ffd400;
+}
+
+.chart-num {
+  margin: 0;
+  position: absolute;
+  left: 2px;
+  top: 4px;
+}
+
+.chart-pos {
+  margin: 0;
+  position: absolute;
+  left: 95px;
+  top: 4px;
+}
+
+.chart-dir {
+  margin: 0;
+  position: absolute;
+  left: 110px;
+  top: 4px;
 }
 
 #ops-axis {
@@ -285,4 +521,53 @@ export default {
     background-color: #0000aa
   }
 }
+
+#menu {
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  left: 0px;
+  width: 320px;
+  height: 416px;
+}
+
+#menu_back {
+  margin: 0;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 320px;
+  height: 416px;
+  background-color:#000000;
+  opacity: 0.5
+}
+
+#menu_area_back {
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  width: 260px;
+  height: 356px;
+  background-color:#ffffff;
+  opacity: 0.8
+}
+
+#menu_area {
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  width: 260px;
+  height: 356px;
+}
+
+.menu_tile {
+  margin: 20px;
+  position: relative;
+  width: 220px;
+  height: 30px;
+  background-color:#ef9564;
+}
+
 </style>

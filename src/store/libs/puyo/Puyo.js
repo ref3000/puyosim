@@ -75,8 +75,11 @@ class Field {
     return this.get(pos) === Kind.BRANK
   }
   get (pos) {
-    if (pos.y < 1 || pos.y > this.height || pos.x < 1 || pos.x > this.width) {
+    if (pos.y < 1 || pos.x < 1 || pos.x > this.width) {
       return Kind.WALL
+    }
+    if (pos.y > this.height) {
+      return Kind.BRANK
     }
     return this._field[pos.y - 1][pos.x - 1]
   }
@@ -109,11 +112,90 @@ class Field {
     }
     return false
   }
+  _countConnection (pos, kind, flags) {
+    if (this.get(pos) === Kind.BRANK) return 0
+    if (this.get(pos) === Kind.OJAMA) return 0
+    if (this.get(pos) !== kind) return 0
+    if (flags.get(pos) !== Kind.BRANK) return 0
+    if (pos.y >= 13) return 0
+    flags.set(pos, kind)
+    return this._countConnection(new Pos(pos.x, pos.y + 1), kind, flags) +
+    this._countConnection(new Pos(pos.x + 1, pos.y), kind, flags) +
+    this._countConnection(new Pos(pos.x, pos.y - 1), kind, flags) +
+    this._countConnection(new Pos(pos.x - 1, pos.y), kind, flags) + 1
+  }
+  countConnection (pos) {
+    return this._countConnection(pos, this.get(pos), new Field())
+  }
+  _deleteConnection (pos, kind) {
+    if (this.get(pos) === Kind.BRANK) return 0
+    if (this.get(pos) === Kind.OJAMA) {
+      this.set(pos, Kind.BRANK)
+      return 0
+    }
+    if (this.get(pos) !== kind) return 0
+    if (pos.y >= 13) return 0
+    this.set(pos, Kind.BRANK)
+    return this._deleteConnection(new Pos(pos.x, pos.y + 1), kind) +
+    this._deleteConnection(new Pos(pos.x + 1, pos.y), kind) +
+    this._deleteConnection(new Pos(pos.x, pos.y - 1), kind) +
+    this._deleteConnection(new Pos(pos.x - 1, pos.y), kind) + 1
+  }
+  deleteConnection (pos) {
+    return this._deleteConnection(pos, this.get(pos))
+  }
+  canFire () {
+    let flags = new Field()
+    for (let y = 1; y < this.height; y++) {
+      for (let x = 1; x <= this.width; x++) {
+        let pos = new Pos(x, y)
+        if (this._countConnection(pos, this.get(pos), flags) >= 4) return true
+      }
+    }
+    return false
+  }
+  stepFire () {
+    class Step {
+      constructor () {
+        this.num = 0          // 消えたぷよの数
+        this.connections = [] // 連結数
+        this.color = 0        // 色数
+      }
+    }
+    let step = new Step()
+    let flags = new Field()
+    var colorFlags = {}
+    for (let y = 1; y < this.height; y++) {
+      for (let x = 1; x <= this.width; x++) {
+        let pos = new Pos(x, y)
+        let kind = this.get(pos)
+        let n = this._countConnection(pos, kind, flags)
+        if (n >= 4) {
+          this.deleteConnection(pos)
+          step.num += n
+          step.connections.push(n)
+          colorFlags[kind] = true
+        }
+      }
+    }
+    step.color = Object.keys(colorFlags).length
+    return step
+  }
   Height () {
     return this.height
   }
   Width () {
     return this.width
+  }
+  copy () {
+    let fd = new Field()
+    for (let y = 1; y <= this.height; y++) {
+      for (let x = 1; x <= this.width; x++) {
+        let pos = new Pos(x, y)
+        fd.set(pos, this.get(pos))
+      }
+    }
+    return fd
   }
 }
 
