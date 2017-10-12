@@ -17,7 +17,7 @@
         <div id="ojama-image-area">
         </div>
         <div id="info-area">
-          <div id="turn-view">{{state.turn}}手目</div>
+          <div id="turn-view">{{state.turn + 1}}手目</div>
           <div id="chain-view">{{state.chain}}連鎖 {{state.score}}点</div>
           <div id="score-view">合計 {{state.sumScore}}点</div>
         </div>
@@ -38,8 +38,8 @@
       <div class="bt" v-on:touchstart="b_right" v-on:mousedown="b_right" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">→</div>
       <div class="bt" v-on:touchstart="b_turnLeft" v-on:mousedown="b_turnLeft" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">L</div>
       <div class="bt" v-on:touchstart="b_turnRight" v-on:mousedown="b_turnRight" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">R</div>
-      <button v-on:click="b_debug">step</button>
-      <canvas id="output" width="320" height="418"></canvas>
+      <button v-on:touchstart="b_debug" v-on:mousedown="b_debug">step</button>
+      <textarea id="log">hoge</textarea>
     </div>
     <div id="menu" v-if="state.hamburger">
       <div id="menu_back"></div>
@@ -47,8 +47,12 @@
       <div id="menu_area">
         <div class="menu_tile" v-on:touchstart="tReset" v-on:mousedown="tReset">初手に戻す</div>
         <div class="menu_tile" v-on:touchstart="tInit" v-on:mousedown="tInit">ツモを変えてリセット</div>
-        <div class="menu_tile" v-on:touchstart="tDownload" v-on:mousedown="tDownload" href="#" download="test.txt">set</div>
-        <div class="menu_tile" id="download" href="#" download="test.txt">download</div>
+        <div class="menu_tile" v-on:touchstart="tCreateGif" v-on:mousedown="tCreateGif">現在手までのGIF画像を作成</div>
+        <div id="gifView" v-if="state.gifView">
+          <img :src="state.gifSrc" style="margin-top: 10px"></img>
+          <div v-if="state.gifSrc==null" style="position: absolute; top: 150px; left: 75px">画像生成中...</div>
+          <a id="dl" v-if="state.gifSrc!=null" :href="state.gifSrc" download="chart.gif" style="margin-top: 5px">download</a>
+        </div>
       </div>
     </div>
   </div>
@@ -58,13 +62,6 @@
 import store from './store/Store'
 import util from './store/libs/puyo/Util'
 import Puyo from './store/libs/puyo/Puyo'
-import * as Gif from './vendor/gif'
-
-console.log(Gif)
-console.log(Gif.constructor)
-console.log(new Gif())
-let g = new Gif({workers: 2, quality: 10})
-console.log(g)
 
 function isClickDownEvent (e) {
   let tapEventType = window.ontouchstart === null ? 'touchstart' : 'mousedown'
@@ -135,6 +132,11 @@ function goBottom () {
     el.scrollTop = el.scrollHeight
   }, 20)
 }
+
+// function printDebug (text) {
+//   let log = document.getElementById('log')
+//   log.innerHTML = text
+// }
 
 export default {
   name: 'app',
@@ -241,14 +243,8 @@ export default {
       store.moveTurn(i)
     },
     b_debug: function (e) {
-      let canvas = document.getElementById('output')
-      let ctx = canvas.getContext('2d')
-      let img = new Image()
-      img.src = require('./assets/puyo_c.png')
-      ctx.drawImage(img, 0, 0)
-      let data = canvas.toDataURL('image/png')
-      console.log(data)
-      document.getElementById('output').href = data
+      if (!isClickDownEvent(e)) return
+      store.createGif()
     },
     puyoSrc: function (obj) {
       if (obj.state === 'extinction') return require('./assets/puyo_c.png')
@@ -290,6 +286,7 @@ export default {
     },
     hamburger: function (e) {
       if (!isClickDownEvent(e)) return
+      store.closeGifView()
       store.toggleHamburger()
     },
     tInit: function (e) {
@@ -301,6 +298,11 @@ export default {
       if (!isClickDownEvent(e)) return
       store.moveTurn(0)
       store.toggleHamburger()
+    },
+    tCreateGif: function (e) {
+      if (!isClickDownEvent(e)) return
+      store.openGifView()
+      store.createGif()
     },
     tDownload: function (e) {
       let content = 'あいうえお'
@@ -568,6 +570,16 @@ export default {
   width: 220px;
   height: 30px;
   background-color:#ef9564;
+}
+
+#gifView {
+  margin: 0;
+  position: absolute;
+  top: -55px;
+  left: 10px;
+  width: 240px;
+  height: 460px;
+  background-color:#ffffff;
 }
 
 </style>

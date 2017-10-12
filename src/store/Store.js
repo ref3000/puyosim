@@ -1,6 +1,7 @@
 import Puyo from './libs/puyo/Puyo'
 // import Util from './libs/PuyoUtil'
 import Game from './libs/puyo/Game'
+import Gif from 'gif.js.optimized'
 let game = new Game()
 
 let state = {
@@ -22,7 +23,9 @@ let state = {
   score: 0,
   sumScore: 0,
   history: [],
-  hamburger: false
+  hamburger: false,
+  gifSrc: null,
+  gifView: false
 }
 
 let lastTurnMs = 0
@@ -180,5 +183,80 @@ export default {
   },
   toggleHamburger () {
     state.hamburger = !state.hamburger
+  },
+  createGif () {
+    console.log('createGif!')
+    let gif = new Gif({
+      repeat: -1,
+      width: 192,
+      height: 416
+    })
+
+    let cv = document.createElement('canvas')
+    cv.width = 192
+    cv.height = 416
+    let ctx = cv.getContext('2d')
+
+    let back = new Image()
+    back.src = require('../assets/puyo_field_back.png')
+    let pr = new Image()
+    pr.src = require('../assets/puyo_r.png')
+    let pg = new Image()
+    pg.src = require('../assets/puyo_g.png')
+    let pb = new Image()
+    pb.src = require('../assets/puyo_b.png')
+    let py = new Image()
+    py.src = require('../assets/puyo_y.png')
+    let pp = new Image()
+    pp.src = require('../assets/puyo_p.png')
+    let po = new Image()
+    po.src = require('../assets/puyo_o.png')
+
+    let turn = game.turn
+    for (let i = 0; i <= turn; i++) {
+      ctx.drawImage(back, 0, 0)
+      game.moveTurn(i)
+      for (let y = 1; y <= game.field.height; y++) {
+        for (let x = 1; x <= game.field.width; x++) {
+          let k = game.field.get(new Puyo.Pos(x, y))
+          let xx = (x - 1) * 32
+          let yy = (13 - y) * 32
+          switch (k) { // TODO: 定義の集約
+            case Puyo.Kind.RED:
+              ctx.drawImage(pr, xx, yy)
+              break
+            case Puyo.Kind.BLUE:
+              ctx.drawImage(pb, xx, yy)
+              break
+            case Puyo.Kind.GREEN:
+              ctx.drawImage(pg, xx, yy)
+              break
+            case Puyo.Kind.YELLOW:
+              ctx.drawImage(py, xx, yy)
+              break
+            case Puyo.Kind.PURPLE:
+              ctx.drawImage(pp, xx, yy)
+              break
+            case Puyo.Kind.OJAMA:
+              ctx.drawImage(po, xx, yy)
+              break
+          }
+        }
+      }
+      gif.addFrame(cv, {copy: true, delay: 500})
+    }
+
+    gif.on('finished', function (blob) {
+      let url = URL.createObjectURL(blob)
+      console.log(url)
+      state.gifSrc = url
+    })
+    gif.render()
+  },
+  openGifView () {
+    state.gifView = true
+  },
+  closeGifView () {
+    state.gifView = false
   }
 }
