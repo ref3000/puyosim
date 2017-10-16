@@ -26,8 +26,13 @@ class PuyoPair {
 }
 
 class Next {
-  constructor () {
-    this._random = new Random()
+  constructor (seed) {
+    if (seed == null) {
+      let r = new Random()
+      seed = r.nextInt(64 * 64 * 64 * 64)
+    }
+    this._seed = seed
+    this._random = new Random(seed)
     this._size = 1000
     this._puyos = []
     for (let i = 0; i < this._size; i++) {
@@ -48,6 +53,9 @@ class Next {
       case 3: return Kind.YELLOW
     }
     return Kind.BRANK
+  }
+  seed () {
+    return this._seed
   }
 }
 

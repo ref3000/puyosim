@@ -1,11 +1,25 @@
 import Puyo from './libs/puyo/Puyo'
 // import Util from './libs/PuyoUtil'
 import Game from './libs/puyo/Game'
-import Gif from 'gif.js.optimized'
 let game = new Game()
+import Gif from 'gif.js.optimized'
+import FB from './libs/FB'
+let fb = new FB()
+import Util from './libs/Util'
+
+fb.onLogin(function (user) {
+  state.isLoginWait = false
+  state.isLogin = true
+  state.userName = user.displayName
+})
+
+fb.onLogout(function () {
+  state.isLoginWait = false
+  state.isLogin = false
+})
 
 let state = {
-  title: 'Hello!',
+  title: '完成度60%くらい',
   ops: {
     pos: {
       x: -1,
@@ -25,8 +39,37 @@ let state = {
   history: [],
   hamburger: false,
   gifSrc: null,
-  gifView: false
+  gifView: false,
+  hashStr: '',
+  chartView: false,
+  isLoginWait: true,
+  isLogin: false,
+  userName: ''
 }
+
+function init (hash) {
+  game = new Game()
+  if (hash != null) {
+    if (hash.substring(0, 1) === '#') {
+      hash = hash.slice(1)
+    }
+    let toks = hash.split('!')
+    if (toks[0] != null && toks[0].length > 0) {
+      game.setNextSeed(Util.base64stoNum(toks[0].slice(0, 4)))
+    }
+    if (toks[1] != null && toks[1].length > 0) {
+      let cs = getChartFromHash(toks[1].slice(0, 1000))
+      for (let i = 0; i < cs.length; i++) {
+        game.chart.set(i, cs[i].x, cs[i].dir)
+      }
+    }
+  }
+  updateNext()
+  updateField()
+  updateOps()
+  updateInfo()
+}
+init(window.location.hash)
 
 let lastTurnMs = 0
 
@@ -78,25 +121,68 @@ function updateInfo () {
     h.push(game.chart.get(i))
   }
   state.history = h
+  state.hashStr = getHashStr()
+  window.location.hash = state.hashStr
 }
 
-updateNext()
-updateField()
-updateOps()
-updateInfo()
+function _getChartFromHash (c) {
+  switch (Util.base64ctoNum(c)) {
+    case 0: return {x: null, dir: null}
+    case 1: return {x: 1, dir: 0}
+    case 2: return {x: 1, dir: 1}
+    case 3: return {x: 1, dir: 2}
+    case 4: return {x: 1, dir: 3}
+    case 5: return {x: 2, dir: 0}
+    case 6: return {x: 2, dir: 1}
+    case 7: return {x: 2, dir: 2}
+    case 8: return {x: 2, dir: 3}
+    case 9: return {x: 3, dir: 0}
+    case 10: return {x: 3, dir: 1}
+    case 11: return {x: 3, dir: 2}
+    case 12: return {x: 3, dir: 3}
+    case 13: return {x: 4, dir: 0}
+    case 14: return {x: 4, dir: 1}
+    case 15: return {x: 4, dir: 2}
+    case 16: return {x: 4, dir: 3}
+    case 17: return {x: 5, dir: 0}
+    case 18: return {x: 5, dir: 1}
+    case 19: return {x: 5, dir: 2}
+    case 20: return {x: 5, dir: 3}
+    case 21: return {x: 6, dir: 0}
+    case 22: return {x: 6, dir: 1}
+    case 23: return {x: 6, dir: 2}
+    case 24: return {x: 6, dir: 3}
+  }
+  return {}
+}
+function getChartFromHash (hashStr) {
+  let charts = []
+  for (let i = 0; i < hashStr.length; i++) {
+    let c = hashStr[i]
+    charts.push(_getChartFromHash(c))
+  }
+  return charts
+}
+function _getHashFromChart (ch) {
+  if (ch.x == null || ch.dir == null) return Util.numToBase64c(0)
+  let n = 4 * (ch.x - 1) + ch.dir + 1
+  return Util.numToBase64c(n)
+}
+function getHashStr () {
+  let chart = game.chart
+  let str = Util.numToBase64s(game.next.seed()) + '!'
+  for (let i = 0; i < chart.size; i++) {
+    str += _getHashFromChart(chart.get(i))
+  }
+  return str
+}
 
 export default {
   state: state,
   setTitle (title) {
     this.state.title = title
   },
-  init () {
-    game = new Game()
-    updateNext()
-    updateField()
-    updateOps()
-    updateInfo()
-  },
+  init: init,
   turnLeft () {
     if (!game.rotateLeft()) {
       let nowMs = new Date().getTime()
@@ -169,6 +255,18 @@ export default {
   },
   moveTurn (turnNum) {
     game.moveTurn(turnNum, true)
+    updateOps()
+    updateField()
+    updateInfo()
+  },
+  moveTurnPrev () {
+    game.moveTurn(game.turn - 1, true)
+    updateOps()
+    updateField()
+    updateInfo()
+  },
+  moveTurnNext () {
+    game.moveTurn(game.turn + 1, true)
     updateOps()
     updateField()
     updateInfo()
@@ -247,9 +345,16 @@ export default {
     }
 
     gif.on('finished', function (blob) {
-      let url = URL.createObjectURL(blob)
-      console.log(url)
-      state.gifSrc = url
+      let reader = new window.FileReader()
+      reader.readAsDataURL(blob)
+      reader.onloadend = function () {
+        let base64data = reader.result
+        console.log(base64data)
+        state.gifSrc = base64data
+      }
+      // let url = URL.createObjectURL(blob)
+      // console.log(url)
+      // state.gifSrc = url
     })
     gif.render()
   },
@@ -258,5 +363,25 @@ export default {
   },
   closeGifView () {
     state.gifView = false
+  },
+  openChartView () {
+    state.chartView = true
+  },
+  closeChartView () {
+    state.chartView = false
+  },
+  debug () {
+    game.setNextSeed(Util.base64stoNum('hoge'))
+    updateNext()
+  },
+  login () {
+    fb.login()
+  },
+  logout () {
+    fb.logout()
+  },
+  tweet (str, hasGif) {
+    console.log('tweet', str, hasGif)
+    fb.tweet(str)
   }
 }

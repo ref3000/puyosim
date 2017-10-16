@@ -182,10 +182,11 @@ class Game {
   }
   rotateLeftQuick () {
     if (!this.ops.available) return false
+    if (this.ops.dir === 1 || this.ops.dir === 3) return false
     let ap = this.axisPos()
     let apd = newPos(ap.x, ap.y - 1)
     if (this.ops.dir === 0) {
-      if (!this.field.isBrank(apd)) this.ops.y++
+      if (!this.field.isBrank(apd)) this.ops.pos.y++
     }
     this.ops.dir = (this.ops.dir + 2) % 4
   }
@@ -223,6 +224,7 @@ class Game {
   }
   moveTurn (turnNum, opsSetFlag) {
     console.log('moveTurn', turnNum, opsSetFlag)
+    if (turnNum < 0) return
     // Game初期化
     this.chain = 0
     this.score = 0
@@ -232,7 +234,6 @@ class Game {
     for (let i = 0; i < this.chart.size && i < turnNum; i++) {
       let ch = this.chart.get(i)
       setOpsToField(this.field, ch.x, ch.dir, this.next.get(i))
-      this.field.fall()
       if (!this.field.canFire()) continue
       this.score = 0
       for (let i = 1; i < 20; i++) {
@@ -257,6 +258,9 @@ class Game {
       if (opsSetFlag === true) {
         this.ops.pos = new Puyo.Pos(ch.x, 12)
         this.ops.dir = ch.dir
+        if (!this.field.isBrank(this.axisPos()) || !this.field.isBrank(this.subPos())) {
+          this.ops.pos.y++
+        }
       } else {
         this.ops.pos = new Puyo.Pos(3, 12)
         this.ops.dir = 0
@@ -289,6 +293,9 @@ class Game {
   }
   existNextStep () {
     return this.field.canFall() || this.field.canFire()
+  }
+  setNextSeed (seed) {
+    this.next = new Puyo.Next(seed)
   }
 }
 
