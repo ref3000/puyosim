@@ -19,6 +19,7 @@
         <div id="login-wait" v-if="state.isLoginWait">確認中...</div>
         <div id="login" @click="login" v-if="!state.isLogin && !state.isLoginWait">ログイン</div>
         <div id="logout" @click="logout" v-if="state.isLogin && !state.isLoginWait">{{state.userName}}</div>
+        <div id="status">{{state.statusStr}}</div>
         <img id="hun" :class="{openHamburger: state.hamburger}" src="./assets/hun02.png" v-on:touchstart="hamburger" v-on:mousedown="hamburger"></img>
       </div>
       <div id="mid">
@@ -67,7 +68,7 @@
           <div class="menu_tile" v-on:touchstart="tInit" v-on:mousedown="tInit">ツモを変えてリセット</div>
           <div class="menu_tile" v-on:touchstart="tCreateGif" v-on:mousedown="tCreateGif">現在手までのGIF画像を作成</div>
           <div class="menu_tile" v-on:touchstart="tTweet" v-on:mousedown="tTweet">ぷよ譜をツイートする</div>
-          <div class="menu_tile" v-on:touchstart="tAbout" v-on:mousedown="tAbout">About</div>
+          <div class="menu_tile" v-on:touchstart="tConfig" v-on:mousedown="tConfig">詳細設定</div>
           <div id="chartDescription">現在のぷよ譜↓</div>
           <textarea readonly id="chartArea" v-model="chartURL"></textarea>
           <div id="gifView" v-if="state.gifView">
@@ -75,6 +76,27 @@
             <div v-if="state.gifSrc==null" style="position: absolute; top: 150px; left: 75px">画像生成中...</div>
             <a id="dl" v-if="state.gifSrc!=null" :href="state.gifSrc" download="chart.gif" style="margin-top: 5px">download</a>
           </div>
+        </div>
+        <div id="menu_area_tweet" v-if="state.tweetView">
+          <div id="menu_area_tweet_desc">リンクをあなたの<br>フォロワーに共有する</div>
+          <textarea id="menu_area_tweet_text" v-model="state.tweetText"></textarea>
+          <div id="menu_area_tweet_checkarea">
+            <input type="checkbox" id="menu_area_tweet_check" v-model="state.tweetChecked" @click="clickTweetCheck">
+            現在手までのGIF画像を添付
+          </div>
+          <button type=button class="menu_area_tweet_button" :class="{tweetProcessing: state.gifProcessing}" v-on:touchstart="bTweet" v-on:mousedown="bTweet">{{(state.gifProcessing)?'画像生成中':'ツイート'}}</button>
+        </div>
+        <div id="menu_area_config" v-if="state.configView">
+          <div id="configCaptionSpeed">連鎖スピード</div>
+          <input id="configSpeedBar" type="range" min="1" max="100" step="1" v-model="state.chainSpeed">
+          <div id="configSpeedStr">{{state.chainSpeed}}</div>
+          <div id="configCaptionRevision">ツモ補正</div>
+          <div id="configRevision">
+            <input type="radio" name="configRevision" v-model="state.revision" value="random">完全ランダム<br>
+            <input type="radio" name="configRevision" v-model="state.revision" value="tu">通仕様（128手均等）<br>
+            <input type="radio" name="configRevision" v-model="state.revision" value="classic">クラシック仕様（16手均等）
+          </div>
+          <div id="configSpeedStr">{{state.chainSpeed}}</div>
         </div>
       </div>
     </div>
@@ -168,7 +190,9 @@ function goBottom () {
     el.scrollTop = el.scrollHeight
   }, 20)
 }
+goBottom()
 
+let touchFlag = false
 export default {
   name: 'app',
   components: {
@@ -177,9 +201,17 @@ export default {
   mounted: function () {
     document.title = store.state.title
     window.addEventListener('keydown', keydown, true)
-    // window.addEventListener('touchend', event => {
-    //   event.preventDefault()
-    // }, false)
+    window.addEventListener('touchend', event => {
+      // event.preventDefault()
+      if (touchFlag) {
+        event.preventDefault()
+      } else {
+        touchFlag = true
+        setTimeout(() => {
+          touchFlag = false
+        }, 500)
+      }
+    }, false)
   },
   data: function () {
     return {
@@ -287,6 +319,11 @@ export default {
     b_debug: function (e) {
       if (!isClickDownEvent(e)) return
     },
+    bTweet: function (e) {
+      if (!isClickDownEvent(e)) return
+      event.preventDefault()
+      store.tweet()
+    },
     puyoSrc: function (obj) {
       if (obj.state === 'extinction') return require('./assets/puyo_c.png')
       switch (obj.kind) {
@@ -327,8 +364,6 @@ export default {
     },
     hamburger: function (e) {
       if (!isClickDownEvent(e)) return
-      store.closeGifView()
-      store.closeChartView()
       store.toggleHamburger()
     },
     tInit: function (e) {
@@ -348,10 +383,12 @@ export default {
     },
     tTweet: function (e) {
       if (!isClickDownEvent(e)) return
-      store.tweet('てすと\n' + this.chartURL, false)
+      event.preventDefault()
+      store.openTweetView()
     },
-    tAbout: function (e) {
+    tConfig: function (e) {
       if (!isClickDownEvent(e)) return
+      store.openConfigView()
     },
     tDownload: function (e) {
       let content = 'あいうえお'
@@ -372,6 +409,11 @@ export default {
     },
     logout: function () {
       store.logout()
+    },
+    clickTweetCheck: function (e) {
+      if (e.toElement.checked) {
+        store.createGif()
+      }
     }
   }
 }
@@ -447,6 +489,14 @@ export default {
   font-weight: bold;
   font-size: 14px;
 }
+
+#status {
+  color: #666666;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 28px;
+}
+
 
 #hun {
   position: absolute;
@@ -648,6 +698,107 @@ export default {
   opacity: 0.8
 }
 
+#menu_area_tweet {
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  width: 260px;
+  height: 356px;
+  background-color:#eeeeee;
+}
+
+#menu_area_tweet_desc {
+  margin: 20px;
+  margin-top: 50px;
+  position: relative;
+  width: auto;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: left;
+}
+
+#menu_area_tweet_text {
+  position: relative;
+  width: 200px;
+  height: 80px;
+  border:2px solid #6ea5c8;
+  border-radius: 4px;
+}
+
+#menu_area_tweet_checkarea {
+  position: relative;
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.menu_area_tweet_button {
+  position: absolute;
+  left: 130px;
+  top: 270px;
+  width: 100px;
+  height: 40px;
+  border-radius: 20px;
+  background-color: #4999f0;
+  color: #fff;
+  border-style: none;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.tweetProcessing {
+  background-color: #888888;
+}
+
+#menu_area_config {
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  width: 260px;
+  height: 356px;
+  background-color:#eeeeee;
+}
+
+#configCaptionSpeed {
+  margin: 0;
+  position: absolute;
+  font-size: 14px;
+  top: 10px;
+  left: 20px;
+}
+
+#configSpeedBar {
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  left: 60px;
+}
+
+#configSpeedStr {
+  margin: 0;
+  position: absolute;
+  top: 30px;
+  left: 210px;
+}
+
+#configCaptionRevision {
+  margin: 0;
+  position: absolute;
+  font-size: 14px;
+  top: 60px;
+  left: 20px;
+}
+
+#configRevision {
+  margin: 0;
+  position: absolute;
+  font-size: 14px;
+  top: 85px;
+  left: 40px;
+  text-align: left;
+}
+
 #menu_area {
   margin: 0;
   position: absolute;
@@ -662,6 +813,7 @@ export default {
   position: relative;
   width: 220px;
   height: 30px;
+  line-height: 30px;
   background-color:#ef9564;
 }
 

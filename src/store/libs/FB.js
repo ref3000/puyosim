@@ -16,36 +16,39 @@ let provider = new firebase.auth.TwitterAuthProvider()
 // firebase.auth().useDeviceLanguage()
 
 firebase.auth().getRedirectResult().then(function (result) {
+  console.log('redirectResult()', result)
   if (result.credential) {
     let t = result.credential.accessToken
     let s = result.credential.secret
     let uid = result.user.uid
     firebase.database().ref('users/' + uid + '/tw_key').set(t)
     firebase.database().ref('users/' + uid + '/tw_skey').set(s)
-    console.log(result.credentia)
+    // console.log(result.credentia)
   }
   // The signed-in user info.
-  let user = result.user
-  console.log(user)
+  // console.log(result.user)
 }).catch(function (error) {
   console.log(error)
-  // var errorCode = error.code;
-  // var errorMessage = error.message;
-  // // The email of the user's account used.
-  // var email = error.email;
-  // // The firebase.auth.AuthCredential type that was used.
-  // var credential = error.credential;
-  // // ...
 })
 
 let loginFunc = function () {}
 let logoutFunc = function () {}
+let isLogin = false
+let key = null
+let skey = null
 firebase.auth().onAuthStateChanged(function (user) {
   console.log('auth state changed!', user)
   if (user) {
     loginFunc(user)
+    isLogin = true
+    firebase.database().ref('/users/' + user.uid).once('value').then(function (snapshot) {
+      let val = snapshot.val()
+      key = val.tw_key
+      skey = val.tw_skey
+    })
   } else {
     logoutFunc()
+    isLogin = false
   }
 })
 
@@ -62,17 +65,26 @@ class FB {
   onLogout (f) {
     logoutFunc = f
   }
-  tweet (status) {
+  tweet (status, base64str, callback) {
+    if (base64str == null) base64str = null
+    console.log('key', key)
+    if (!isLogin) {
+      callback(false)
+      return
+    }
     axios.post('https://api.refpuyo.net/tweet', {
-      key: '919402543469305857-EK8471oUuP9gme22TKS282RK629kgFS',
-      skey: 'n4WBwhiBrU3kiYk57B7PJXIjOcaqiDVpUwacFrMG1t31j',
-      status: status
+      key: key,
+      skey: skey,
+      status: status,
+      data: base64str
     })
     .then(function (response) {
       console.log(response)
+      if (callback != null) callback(true)
     })
     .catch(function (error) {
       console.log(error)
+      if (callback != null) callback(false)
     })
   }
 }

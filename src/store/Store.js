@@ -19,7 +19,7 @@ fb.onLogout(function () {
 })
 
 let state = {
-  title: '完成度60%くらい',
+  title: '完成度70%くらい',
   ops: {
     pos: {
       x: -1,
@@ -40,11 +40,19 @@ let state = {
   hamburger: false,
   gifSrc: null,
   gifView: false,
+  gifProcessing: false,
   hashStr: '',
   chartView: false,
   isLoginWait: true,
   isLogin: false,
-  userName: ''
+  userName: '',
+  tweetView: false,
+  tweetText: '',
+  tweetChecked: true,
+  configView: false,
+  chainSpeed: 50,
+  revision: 'random',
+  statusStr: ''
 }
 
 function init (hash) {
@@ -64,6 +72,7 @@ function init (hash) {
       }
     }
   }
+  game.moveTurn(game.chart.size - 1, true)
   updateNext()
   updateField()
   updateOps()
@@ -221,7 +230,7 @@ export default {
     if (game.existNextStep()) {
       setTimeout(function () {
         this.nextStep()
-      }.bind(this), 500)
+      }.bind(this), 1000 - (state.chainSpeed * 10))
     }
     updateOps()
     updateField()
@@ -235,11 +244,11 @@ export default {
     if (game.existNextStep()) {
       setTimeout(function () {
         this.nextStep()
-      }.bind(this), 500)
+      }.bind(this), 1000 - (state.chainSpeed * 10))
     } else {
       setTimeout(function () {
         updateField() // TODO: やばい…
-      }, 500)
+      }, 1000 - (state.chainSpeed * 10))
     }
     updateOps()
     updateField()
@@ -280,10 +289,28 @@ export default {
     }
   },
   toggleHamburger () {
-    state.hamburger = !state.hamburger
+    if (state.hamburger) {
+      this.closeHamburger()
+    } else {
+      this.openHamburger()
+    }
+  },
+  closeHamburger () {
+    state.hamburger = false
+    this.closeGifView()
+    this.closeChartView()
+    this.closeTweetView()
+    this.closeConfigView()
+  },
+  openHamburger () {
+    state.hamburger = true
   },
   createGif () {
     console.log('createGif!')
+    if (state.gifProcessing === true) return
+    state.gifProcessing = true
+    console.log('start')
+
     let gif = new Gif({
       repeat: -1,
       width: 192,
@@ -351,6 +378,7 @@ export default {
         let base64data = reader.result
         console.log(base64data)
         state.gifSrc = base64data
+        state.gifProcessing = false
       }
       // let url = URL.createObjectURL(blob)
       // console.log(url)
@@ -370,6 +398,15 @@ export default {
   closeChartView () {
     state.chartView = false
   },
+  openTweetView () {
+    state.tweetText = state.chain + '連鎖' + state.score + '点（' + (state.turn + 1) + '手）\n'
+    state.tweetText += 'https://sim.refpuyo.net/#' + state.hashStr
+    state.tweetView = true
+    if (state.tweetChecked) this.createGif()
+  },
+  closeTweetView () {
+    state.tweetView = false
+  },
   debug () {
     game.setNextSeed(Util.base64stoNum('hoge'))
     updateNext()
@@ -380,8 +417,40 @@ export default {
   logout () {
     fb.logout()
   },
-  tweet (str, hasGif) {
-    console.log('tweet', str, hasGif)
-    fb.tweet(str)
+  tweet () {
+    if (state.gifProcessing === true) return
+    state.statusStr = 'ツイート処理中...'
+    if (state.tweetChecked === true) {
+      let toks = state.gifSrc.split(',')
+      fb.tweet(state.tweetText, toks[1], function (isSuccess) {
+        if (isSuccess) {
+          state.statusStr = '投稿完了！'
+        } else {
+          state.statusStr = '投稿失敗...'
+        }
+        setTimeout(function () {
+          state.statusStr = ''
+        }, 1000)
+      })
+    } else {
+      fb.tweet(state.tweetText, null, function (isSuccess) {
+        if (isSuccess) {
+          state.statusStr = '投稿完了！'
+        } else {
+          state.statusStr = '投稿失敗...'
+        }
+        setTimeout(function () {
+          state.statusStr = ''
+        }, 1000)
+      })
+    }
+    this.closeHamburger()
+  },
+  openConfigView () {
+    state.configView = true
+  },
+  closeConfigView () {
+    state.configView = false
+    game.setNextMode(state.revision)
   }
 }

@@ -26,15 +26,21 @@ class PuyoPair {
 }
 
 class Next {
-  constructor (seed) {
+  constructor (seed, mode) {
+    this.init(seed, mode)
+  }
+  init (seed, mode) {
+    if (mode == null) mode = 'random'
+    this._mode = mode
     if (seed == null) {
       let r = new Random()
       seed = r.nextInt(64 * 64 * 64 * 64)
     }
     this._seed = seed
-    this._random = new Random(seed)
+    this._random = new Random(this._seed)
     this._size = 1000
     this._puyos = []
+    console.log(this._seed, this._mode)
     for (let i = 0; i < this._size; i++) {
       this._puyos.push(new PuyoPair(this._nextKind(), this._nextKind()))
     }

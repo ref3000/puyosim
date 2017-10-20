@@ -297,6 +297,9 @@ class Game {
   setNextSeed (seed) {
     this.next = new Puyo.Next(seed)
   }
+  setNextMode (mode) {
+    this.next.init(this.next._seed, mode)
+  }
 }
 
 export default Game
