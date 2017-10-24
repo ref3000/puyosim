@@ -1,7 +1,7 @@
 import Puyo from './libs/puyo/Puyo'
 // import Util from './libs/PuyoUtil'
 import Game from './libs/puyo/Game'
-let game = new Game()
+let game
 import Gif from 'gif.js.optimized'
 import FB from './libs/FB'
 let fb = new FB()
@@ -19,7 +19,7 @@ fb.onLogout(function () {
 })
 
 let state = {
-  title: '完成度70%くらい',
+  title: '完成度80%くらい',
   ops: {
     pos: {
       x: -1,
@@ -70,11 +70,12 @@ function init (hash) {
     if (toks[1] != null && toks[1].length > 0) {
       let cs = getChartFromHash(toks[1].slice(0, 1000))
       for (let i = 0; i < cs.length; i++) {
-        game.chart.set(i, cs[i].x, cs[i].dir)
+        game.chart.set(i, cs[i].set.x, cs[i].set.dir)
+        if (cs[i].editField != null) game.chart.setEditedField(i, cs[i].editField)
       }
     }
   }
-  game.moveTurn(game.chart.size - 1, true)
+  game.moveTurn(game.chart.size() - 1, true)
   updateNext()
   updateField()
   updateOps()
@@ -128,8 +129,13 @@ function updateInfo () {
   state.score = game.score
   state.sumScore = game.sumScore
   let h = []
-  for (let i = 0; i < game.chart.size; i++) {
-    h.push(game.chart.get(i))
+  for (let i = 0; i < game.chart.size(); i++) {
+    let ch = game.chart.get(i)
+    h.push({
+      x: ch.x,
+      dir: ch.dir,
+      isEdit: game.chart.getEditedField(i) != null
+    })
   }
   state.history = h
   state.hashStr = getHashStr()
@@ -138,39 +144,71 @@ function updateInfo () {
 
 function _getChartFromHash (c) {
   switch (Util.base64ctoNum(c)) {
-    case 0: return {x: null, dir: null}
-    case 1: return {x: 1, dir: 0}
-    case 2: return {x: 1, dir: 1}
-    case 3: return {x: 1, dir: 2}
-    case 4: return {x: 1, dir: 3}
-    case 5: return {x: 2, dir: 0}
-    case 6: return {x: 2, dir: 1}
-    case 7: return {x: 2, dir: 2}
-    case 8: return {x: 2, dir: 3}
-    case 9: return {x: 3, dir: 0}
-    case 10: return {x: 3, dir: 1}
-    case 11: return {x: 3, dir: 2}
-    case 12: return {x: 3, dir: 3}
-    case 13: return {x: 4, dir: 0}
-    case 14: return {x: 4, dir: 1}
-    case 15: return {x: 4, dir: 2}
-    case 16: return {x: 4, dir: 3}
-    case 17: return {x: 5, dir: 0}
-    case 18: return {x: 5, dir: 1}
-    case 19: return {x: 5, dir: 2}
-    case 20: return {x: 5, dir: 3}
-    case 21: return {x: 6, dir: 0}
-    case 22: return {x: 6, dir: 1}
-    case 23: return {x: 6, dir: 2}
-    case 24: return {x: 6, dir: 3}
+    case 0: return {type: 'set', x: null, dir: null}
+    case 1: return {type: 'set', x: 1, dir: 0}
+    case 2: return {type: 'set', x: 1, dir: 1}
+    case 3: return {type: 'set', x: 1, dir: 2}
+    case 4: return {type: 'set', x: 1, dir: 3}
+    case 5: return {type: 'set', x: 2, dir: 0}
+    case 6: return {type: 'set', x: 2, dir: 1}
+    case 7: return {type: 'set', x: 2, dir: 2}
+    case 8: return {type: 'set', x: 2, dir: 3}
+    case 9: return {type: 'set', x: 3, dir: 0}
+    case 10: return {type: 'set', x: 3, dir: 1}
+    case 11: return {type: 'set', x: 3, dir: 2}
+    case 12: return {type: 'set', x: 3, dir: 3}
+    case 13: return {type: 'set', x: 4, dir: 0}
+    case 14: return {type: 'set', x: 4, dir: 1}
+    case 15: return {type: 'set', x: 4, dir: 2}
+    case 16: return {type: 'set', x: 4, dir: 3}
+    case 17: return {type: 'set', x: 5, dir: 0}
+    case 18: return {type: 'set', x: 5, dir: 1}
+    case 19: return {type: 'set', x: 5, dir: 2}
+    case 20: return {type: 'set', x: 5, dir: 3}
+    case 21: return {type: 'set', x: 6, dir: 0}
+    case 22: return {type: 'set', x: 6, dir: 1}
+    case 23: return {type: 'set', x: 6, dir: 2}
+    case 24: return {type: 'set', x: 6, dir: 3}
+    case 25: return {type: 'editstart'}
+    case 26: return {type: 'editend'}
   }
   return {}
 }
+function strToField (str) {
+  let field = new Puyo.Field()
+  for (let i = 0; i < str.length; i++) {
+    let x = (i % 6) + 1
+    let y = Math.floor(i / 6) + 1
+    field.set(new Puyo.Pos(x, y), Number(str[i]))
+  }
+  return field
+}
 function getChartFromHash (hashStr) {
+  let editFlag = false
+  let editStr = ''
   let charts = []
   for (let i = 0; i < hashStr.length; i++) {
     let c = hashStr[i]
-    charts.push(_getChartFromHash(c))
+    let obj = _getChartFromHash(c)
+    if (editFlag && obj.type !== 'editend') {
+      editStr += c
+      continue
+    }
+    switch (obj.type) {
+      case 'set':
+        charts.push({set: {x: obj.x, dir: obj.dir}})
+        if (editStr.length > 0) {
+          charts[charts.length - 1].editField = strToField(editStr)
+          editStr = ''
+        }
+        break
+      case 'editstart':
+        editFlag = true
+        break
+      case 'editend':
+        editFlag = false
+        break
+    }
   }
   return charts
 }
@@ -179,10 +217,26 @@ function _getHashFromChart (ch) {
   let n = 4 * (ch.x - 1) + ch.dir + 1
   return Util.numToBase64c(n)
 }
+function _getHashFromChartEdit (field) {
+  if (field == null) return ''
+  let s = ''
+  for (let y = 1; y <= field.Height(); y++) {
+    for (let x = 1; x <= field.Width(); x++) {
+      let kind = field.get(new Puyo.Pos(x, y))
+      s += kind
+    }
+  }
+  for (let i = s.length - 1; i >= 0; i--) {
+    if (s[i] !== '0') break
+    s = s.slice(0, -1)
+  }
+  return 'z' + s + 'A'
+}
 function getHashStr () {
   let chart = game.chart
   let str = Util.numToBase64s(game.next.seed()) + '!'
-  for (let i = 0; i < chart.size; i++) {
+  for (let i = 0; i < chart.size(); i++) {
+    str += _getHashFromChartEdit(chart.getEditedField(i))
     str += _getHashFromChart(chart.get(i))
   }
   return str
@@ -195,6 +249,8 @@ export default {
   },
   init: init,
   turnLeft () {
+    if (!game.ops.available) return
+    if (state.editView) return
     if (!game.rotateLeft()) {
       let nowMs = new Date().getTime()
       if (nowMs - lastTurnMs < 1000) {
@@ -207,6 +263,8 @@ export default {
     updateOps()
   },
   turnRight () {
+    if (!game.ops.available) return
+    if (state.editView) return
     if (!game.rotateRight()) {
       let nowMs = new Date().getTime()
       if (nowMs - lastTurnMs < 1000) {
@@ -219,15 +277,20 @@ export default {
     updateOps()
   },
   moveLeft () {
+    if (!game.ops.available) return
+    if (state.editView) return
     game.moveLeft()
     updateOps()
   },
   moveRight () {
+    if (!game.ops.available) return
+    if (state.editView) return
     game.moveRight()
     updateOps()
   },
   setDown () {
     if (!game.ops.available) return
+    if (state.editView) return
     game.setDown()
     if (game.existNextStep()) {
       setTimeout(function () {
@@ -456,7 +519,20 @@ export default {
     game.setNextMode(state.revision)
   },
   pushEditIcon () {
-    state.editView = !state.editView
+    if (state.editView) {
+      this.closeEditView()
+    } else {
+      this.openEditView()
+    }
+  },
+  openEditView () {
+    state.editView = true
+  },
+  closeEditView () {
+    state.editView = false
+    game.saveField()
+    updateField()
+    updateInfo()
   },
   fieldClick (x, y) {
     if (!state.editView) return

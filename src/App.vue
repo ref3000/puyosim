@@ -50,7 +50,7 @@
           </div>
           <div id="chart-area">
             <div v-for="(obj, index) in state.history" class="chart-tile" :class="{activeTile: index===state.turn}" v-on:touchstart="b_chart($event, index)" v-on:mousedown="b_chart($event, index)">
-              <div class="chart-num">{{index + 1}}</div>
+              <div class="chart-num" :style="obj.isEdit?'color:#ff0000; font-weight:bold;':''">{{index + 1}}</div>
               <img class="puyo" :src='puyoHistoryAxisSrc(obj, index)' style="left: 28px">
               <img class="puyo" :src='puyoHistorySubSrc(obj, index)' style='left: 60px'>
               <div class="chart-pos">{{(obj.x>0&&obj.x<7)?obj.x:''}}</div>
@@ -217,7 +217,7 @@ export default {
           touchFlag = false
         }, 500)
       }
-    }, false)
+    }, true)
   },
   data: function () {
     return {
@@ -330,27 +330,31 @@ export default {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.moveLeft()
+      e.preventDefault()
     },
     b_right: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.moveRight()
+      e.preventDefault()
     },
     b_down: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.setDown()
-      // goBottom()
+      e.preventDefault()
     },
     b_turnLeft: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.turnLeft()
+      e.preventDefault()
     },
     b_turnRight: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.turnRight()
+      e.preventDefault()
     },
     b_untouch: function (e) {
       setUntouchStyle(e)
@@ -358,22 +362,25 @@ export default {
     b_chart: function (e, i) {
       if (!isClickDownEvent(e)) return
       store.moveTurn(i)
+      e.preventDefault()
     },
     b_prev: function (e) {
       if (!isClickDownEvent(e)) return
       store.moveTurnPrev()
+      e.preventDefault()
     },
     b_next: function (e) {
       if (!isClickDownEvent(e)) return
       store.moveTurnNext()
+      e.preventDefault()
     },
     b_debug: function (e) {
       if (!isClickDownEvent(e)) return
     },
     bTweet: function (e) {
       if (!isClickDownEvent(e)) return
-      event.preventDefault()
       store.tweet()
+      e.preventDefault()
     },
     puyoSrc: function (obj) {
       if (obj.state === 'extinction') return require('./assets/puyo_c.png')
@@ -470,7 +477,8 @@ export default {
         store.createGif()
       }
     },
-    pushEditIcon: function () {
+    pushEditIcon: function (e) {
+      if (!isClickDownEvent(e)) return
       store.pushEditIcon()
     },
     puyoFieldTouch: function (e, obj) {
@@ -487,7 +495,6 @@ export default {
     },
     editPuyoTouch: function (e, obj) {
       if (!isClickDownEvent(e)) return
-      // store.fieldClick(obj.x, obj.y)
       store.setEditKind(obj.kind)
     },
     editPuyoTouchStyle: function (obj) {

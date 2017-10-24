@@ -79,7 +79,7 @@ class Field {
     this.height = 13
     this.width = 6
     this._field = []
-    for (let y = 0; y < this.height; y++) {
+    for (let y = 0; y < this.height + 1; y++) {
       let line = []
       for (let x = 0; x < this.width; x++) {
         line.push(Kind.BRANK)
@@ -100,7 +100,7 @@ class Field {
     return this._field[pos.y - 1][pos.x - 1]
   }
   set (pos, kind) {
-    if (pos.y < 1 || pos.y > this.height || pos.x < 1 || pos.x > this.width) {
+    if (pos.y < 1 || pos.y > this.height + 1 || pos.x < 1 || pos.x > this.width) {
       return
     }
     this._field[pos.y - 1][pos.x - 1] = kind
@@ -118,6 +118,7 @@ class Field {
         t++
       }
     }
+    for (let x = 1; x <= this.width; x++) this.set(new Pos(x, 14), Kind.BRANK)
     return flag
   }
   canFall () {
@@ -129,6 +130,9 @@ class Field {
     return false
   }
   _countConnection (pos, kind, flags) {
+    if (this.get(pos) === Kind.IRON) return 0
+    if (this.get(pos) === Kind.PEKE) return 0
+    if (this.get(pos) === Kind.WALL) return 0
     if (this.get(pos) === Kind.BRANK) return 0
     if (this.get(pos) === Kind.OJAMA) return 0
     if (this.get(pos) !== kind) return 0
@@ -212,6 +216,15 @@ class Field {
       }
     }
     return fd
+  }
+  equal (field) {
+    for (let y = 1; y <= this.height; y++) {
+      for (let x = 1; x <= this.width; x++) {
+        let pos = new Pos(x, y)
+        if (this.get(pos) !== field.get(pos)) return false
+      }
+    }
+    return true
   }
 }
 

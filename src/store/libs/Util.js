@@ -22,7 +22,6 @@ export default {
     return table[n]
   },
   numToBase64s: function (n) {
-    console.log(n)
     if (n < 0) return '?'
     let s = ''
     for (let i = 0; i < 10; i++) {

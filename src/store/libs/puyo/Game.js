@@ -45,37 +45,65 @@ class Chart {
   constructor () {
     this.chart = []
     this.editedFields = []
-    this.size = 0
-    for (let i = 0; i < 1000; i++) { // これ意味ある？
-      this.chart.push({})
-      // this.editedFields.push({})
-    }
+    this._size = 0
+  }
+  _updateSize (turn) {
+    if (turn + 1 > this._size) this._size = turn + 1
   }
   set (turn, x, dir) {
     if (turn > 999) return
+    console.log('chart set', turn)
     this.chart[turn] = {
       x: x,
       dir: dir
     }
-    if (turn + 1 > this.size) this.size = turn + 1
+    this._updateSize(turn)
   }
   setEditedField (turn, field) {
+    console.log('sef', turn, field)
     if (turn > 999) return
-    this.editedFields[turn] = field.copy()
+    console.log('chart setEditedField', turn)
+    if (field != null && field.copy != null) {
+      this.editedFields[turn] = field.copy()
+    } else {
+      this.editedFields[turn] = null
+    }
+    this._updateSize(turn)
   }
   get (turn) {
-    if (turn >= this.size) return {}
+    if (turn >= this._size) return {}
     return this.chart[turn]
   }
   getEditedField (turn) {
-    if (turn >= this.size) return {}
+    if (turn >= this._size) return {}
     return this.editedFields[turn]
   }
   size () {
-    return this.size
+    return this._size
   }
-  setSize (size) {
-    this.size = size
+  normalize (next) {
+    console.log('normalize', this)
+    let field = new Puyo.Field()
+    for (let i = 0; i < this.size(); i++) {
+      // 「ぷよ図編集」を処理
+      let ef = this.getEditedField(i)
+      if (ef != null) {
+        if (ef.equal(field)) {
+          this.editedFields[i] = null
+        } else {
+          field = ef.copy()
+        }
+      }
+      // 「手順」を処理
+      let ch = this.get(i)
+      setOpsToField(field, ch.x, ch.dir, next.get(i))
+      if (!field.canFire()) continue
+      for (let i = 1; i < 20; i++) {
+        field.stepFire()
+        field.fall()
+        if (!field.canFire()) break
+      }
+    }
   }
 }
 
@@ -204,7 +232,6 @@ class Game {
     return this.rotateLeftQuick()
   }
   setDown () {
-    console.log(this.field)
     if (!this.ops.available) return
     let ap = this.axisPos()
     let sp = this.subPos()
@@ -214,15 +241,11 @@ class Game {
     }
     this.ops.available = false
     // 設置
+    console.log(this)
     this.field.set(ap, this.next.get(this.turn).axis)
     this.field.set(sp, this.next.get(this.turn).sub)
     this.field.fall()
     // 履歴をセット
-    // let ch = this.chart.get(this.turn)
-    // if (ch.x !== this.ops.pos.x || ch.dir !== this.ops.dir) {
-    //   this.chart.setSize(this.turn)
-    // }
-    this.chart.setSize(this.turn)
     this.chart.set(this.turn, this.ops.pos.x, this.ops.dir)
     // 発火可能なら発火処理
     if (this.field.canFire()) {
@@ -230,6 +253,8 @@ class Game {
       this.score = 0
       return
     }
+    this.chart.set(this.turn + 1, null, null)
+    this.chart.setEditedField(this.turn + 1, null)
     this.moveTurn(this.turn + 1)
     return
   }
@@ -242,12 +267,14 @@ class Game {
     this.sumScore = 0
     // history から field を再現
     this.field = new Puyo.Field()
-    for (let i = 0; i < this.chart.size && i < turnNum; i++) {
+    for (let i = 0; i < this.chart.size(); i++) {
+      // 「ぷよ図編集」を処理
       let ef = this.chart.getEditedField(i)
       if (ef != null) {
-        console.log(ef)
-        this.field = ef
+        this.field = ef.copy()
       }
+      if (i >= turnNum) break
+      // 「手順」を処理
       let ch = this.chart.get(i)
       setOpsToField(this.field, ch.x, ch.dir, this.next.get(i))
       if (!this.field.canFire()) continue
@@ -264,7 +291,7 @@ class Game {
     }
     // 移動後の履歴状態に応じて処理
     let ch = this.chart.get(turnNum)
-    if (ch.x == null || ch.dir == null) {
+    if (ch == null || ch.x == null || ch.dir == null) {
       // case: 履歴が存在しないか不完全
       this.chart.set(turnNum, null, null)
       this.ops.pos = new Puyo.Pos(3, 12)
@@ -282,7 +309,6 @@ class Game {
         this.ops.dir = 0
       }
     }
-    //
     this.turn = turnNum
     this.ops.available = true
   }
@@ -291,6 +317,8 @@ class Game {
       this.field.fall()
       if (this.field.canFire()) return
       this.ops.available = true
+      this.chart.set(this.turn + 1, null, null)
+      this.chart.setEditedField(this.turn + 1, null)
       this.moveTurn(this.turn + 1)
       return
     }
@@ -303,6 +331,8 @@ class Game {
       // step
       if (this.field.canFall()) return
       this.ops.available = true
+      this.chart.set(this.turn + 1, null, null)
+      this.chart.setEditedField(this.turn + 1, null)
       this.moveTurn(this.turn + 1)
       return
     }
@@ -319,7 +349,11 @@ class Game {
   editField (x, y, kind) {
     if (kind === Puyo.Kind.PEKE) kind = Puyo.Kind.BRANK
     this.field.set(newPos(x, y), kind)
+  }
+  saveField () {
+    this.field.fall()
     this.chart.setEditedField(this.turn, this.field)
+    this.chart.normalize(this.next)
   }
 }
 
