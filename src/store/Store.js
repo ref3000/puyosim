@@ -52,7 +52,9 @@ let state = {
   configView: false,
   chainSpeed: 50,
   revision: 'random',
-  statusStr: ''
+  statusStr: '',
+  editView: false,
+  editKind: Puyo.Kind.RED
 }
 
 function init (hash) {
@@ -408,8 +410,8 @@ export default {
     state.tweetView = false
   },
   debug () {
-    game.setNextSeed(Util.base64stoNum('hoge'))
-    updateNext()
+    game.setDown()
+    updateField()
   },
   login () {
     fb.login()
@@ -452,5 +454,16 @@ export default {
   closeConfigView () {
     state.configView = false
     game.setNextMode(state.revision)
+  },
+  pushEditIcon () {
+    state.editView = !state.editView
+  },
+  fieldClick (x, y) {
+    if (!state.editView) return
+    game.editField(x, y, state.editKind)
+    updateField()
+  },
+  setEditKind (kind) {
+    state.editKind = kind
   }
 }

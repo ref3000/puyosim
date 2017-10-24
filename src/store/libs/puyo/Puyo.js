@@ -8,8 +8,10 @@ const Kind = { // ぷよの種類
   BLUE: 3,
   YELLOW: 4,
   PURPLE: 5,
-  OJAMA: 8,
-  WALL: 9
+  IRON: 6,
+  OJAMA: 7,
+  WALL: 8,
+  PEKE: 9
 }
 
 // 補助関数

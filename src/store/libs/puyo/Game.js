@@ -44,9 +44,11 @@ function newPos (x, y) {
 class Chart {
   constructor () {
     this.chart = []
+    this.editedFields = []
     this.size = 0
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 1000; i++) { // これ意味ある？
       this.chart.push({})
+      // this.editedFields.push({})
     }
   }
   set (turn, x, dir) {
@@ -57,9 +59,17 @@ class Chart {
     }
     if (turn + 1 > this.size) this.size = turn + 1
   }
+  setEditedField (turn, field) {
+    if (turn > 999) return
+    this.editedFields[turn] = field.copy()
+  }
   get (turn) {
     if (turn >= this.size) return {}
     return this.chart[turn]
+  }
+  getEditedField (turn) {
+    if (turn >= this.size) return {}
+    return this.editedFields[turn]
   }
   size () {
     return this.size
@@ -194,6 +204,7 @@ class Game {
     return this.rotateLeftQuick()
   }
   setDown () {
+    console.log(this.field)
     if (!this.ops.available) return
     let ap = this.axisPos()
     let sp = this.subPos()
@@ -232,6 +243,11 @@ class Game {
     // history から field を再現
     this.field = new Puyo.Field()
     for (let i = 0; i < this.chart.size && i < turnNum; i++) {
+      let ef = this.chart.getEditedField(i)
+      if (ef != null) {
+        console.log(ef)
+        this.field = ef
+      }
       let ch = this.chart.get(i)
       setOpsToField(this.field, ch.x, ch.dir, this.next.get(i))
       if (!this.field.canFire()) continue
@@ -299,6 +315,11 @@ class Game {
   }
   setNextMode (mode) {
     this.next.init(this.next._seed, mode)
+  }
+  editField (x, y, kind) {
+    if (kind === Puyo.Kind.PEKE) kind = Puyo.Kind.BRANK
+    this.field.set(newPos(x, y), kind)
+    this.chart.setEditedField(this.turn, this.field)
   }
 }
 

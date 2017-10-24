@@ -20,20 +20,26 @@
         <div id="login" @click="login" v-if="!state.isLogin && !state.isLoginWait">ログイン</div>
         <div id="logout" @click="logout" v-if="state.isLogin && !state.isLoginWait">{{state.userName}}</div>
         <div id="status">{{state.statusStr}}</div>
+        <img id="editIcon" :class="{editIconActive: state.editView}" src="./assets/edit.png" v-on:touchstart="pushEditIcon" v-on:mousedown="pushEditIcon"></img>
         <img id="hun" :class="{openHamburger: state.hamburger}" src="./assets/hun02.png" v-on:touchstart="hamburger" v-on:mousedown="hamburger"></img>
       </div>
       <div id="mid">
         <img id="puyo-field" src="./assets/puyo_field_back.png">
-          <img class="puyo" :src='opsAxisSrc' :style='opsAxisStyle'></img>
-          <img class="puyo" :src='opsSubSrc' :style='opsSubStyle'></img>
+          <img class="puyo" :src="require('./assets/peke.png')" style='top:32px; left:64px;'></img>
+          <img class="puyo" :src='opsAxisSrc' :style='opsAxisStyle' v-if="!state.editView"></img>
+          <img class="puyo" :src='opsSubSrc' :style='opsSubStyle' v-if="!state.editView"></img>
         </img>
-        <img class="puyo" v-for="obj in state.puyoObjs" :src='puyoSrc(obj)' :style='puyoStyle(obj)'>
-        </img>
+        <img class="puyo" v-for="obj in state.puyoObjs" :src='puyoSrc(obj)' :style='puyoStyle(obj)'></img>
+        <div v-for="obj in puyoFieldTouchObjs" @touchstart="puyoFieldTouch($event, obj)" @mousedown="puyoFieldTouch($event, obj)" :style="puyoFieldTouchStyle(obj)"></div>
         <div id="sub-field">
           <div id="next-area">
             <img class="puyo" v-for="(obj, index) in nextPuyos" :src='puyoSrc(obj)' :style='nextPuyoStyle(obj)' v-on:touchstart="toggleNext($event, index)" v-on:mousedown="toggleNext($event, index)">
           </div>
           <div id="ojama-image-area">
+          </div>
+          <div v-if="state.editView" style="position:absolute; top:0px; left:0px; width:128px; height:64px; background-color:#ffffff">
+            <img class="puyo" v-for="(obj, index) in editPuyos" :src='puyoSrc(obj)' :style='nextPuyoStyle(obj)'>
+            <div v-for="obj in editPuyos" @touchstart="editPuyoTouch($event, obj)" @mousedown="editPuyoTouch($event, obj)" :style="editPuyoTouchStyle(obj)"></div>
           </div>
           <div id="info-area">
             <div id="turn-view">{{state.turn + 1}}手目</div>
@@ -155,7 +161,7 @@ function keydown (e) {
     case 40: // ↓キー
       store.setDown()
       e.preventDefault()
-      goBottom()
+      // goBottom()
       return
     case 88: // x
       store.turnRight()
@@ -166,7 +172,7 @@ function keydown (e) {
     case 67: // c
       return
     case 68: // d
-      // store.debug()
+      store.debug()
       return
     case 69: // e
       // console.log(store.state)
@@ -261,8 +267,38 @@ export default {
       }
       return objs
     },
+    editPuyos: function () {
+      let kinds0 = [Puyo.Kind.RED, Puyo.Kind.GREEN, Puyo.Kind.BLUE, Puyo.Kind.YELLOW]
+      let kinds1 = [Puyo.Kind.PEKE, Puyo.Kind.OJAMA, Puyo.Kind.IRON, Puyo.Kind.WALL]
+      let objs = []
+      for (let i = 0; i < this.state.nextDisplay.length; i++) {
+        objs.push({
+          kind: kinds0[i],
+          x: 32 * i,
+          y: 0
+        })
+        objs.push({
+          kind: kinds1[i],
+          x: 32 * i,
+          y: 32
+        })
+      }
+      return objs
+    },
     chartURL: function () {
       return 'https://sim.refpuyo.net/#' + this.state.hashStr
+    },
+    puyoFieldTouchObjs: function () {
+      let a = []
+      for (let x = 1; x <= 6; x++) {
+        for (let y = 1; y <= 13; y++) {
+          a.push({
+            x: x,
+            y: y
+          })
+        }
+      }
+      return a
     }
   },
   watch: {
@@ -272,6 +308,21 @@ export default {
         document.title = obj.title
       },
       deep: true
+    },
+    'state.turn': function (turn) {
+      let turnTopMin = 32 * (turn)
+      let turnTopMax = 32 * (turn + 1)
+      let el = document.getElementById('chart-area')
+      let elTopMin = el.scrollTop
+      let elTopMax = el.scrollTop + 32 * 8
+      if (elTopMin > turnTopMin) {
+        el.scrollTop = turnTopMin
+      }
+      setTimeout(function () {
+        if (turnTopMax > elTopMax) {
+          el.scrollTop = turnTopMax - 32 * 8
+        }
+      }, 20) // この時点ではまだ生成されてないから苦肉の策
     }
   },
   methods: {
@@ -289,7 +340,7 @@ export default {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.setDown()
-      goBottom()
+      // goBottom()
     },
     b_turnLeft: function (e) {
       if (!isClickDownEvent(e)) return
@@ -337,8 +388,12 @@ export default {
           return require('./assets/puyo_y.png')
         case Puyo.Kind.OJAMA:
           return require('./assets/puyo_o.png')
+        case Puyo.Kind.IRON:
+          return require('./assets/puyo_i.png')
         case Puyo.Kind.WALL:
           return require('./assets/wall01.png')
+        case Puyo.Kind.PEKE:
+          return require('./assets/peke.png')
       }
       return require('./assets/puyo_c.png')
     },
@@ -414,6 +469,35 @@ export default {
       if (e.toElement.checked) {
         store.createGif()
       }
+    },
+    pushEditIcon: function () {
+      store.pushEditIcon()
+    },
+    puyoFieldTouch: function (e, obj) {
+      if (!isClickDownEvent(e)) return
+      store.fieldClick(obj.x, obj.y)
+    },
+    puyoFieldTouchStyle: function (obj) {
+      let s = 'position: absolute;'
+      s += ' top: ' + (13 - obj.y) * 32 + 'px;'
+      s += ' left: ' + (obj.x - 1) * 32 + 'px;'
+      s += ' width: 32px;'
+      s += ' height: 32px;'
+      return s
+    },
+    editPuyoTouch: function (e, obj) {
+      if (!isClickDownEvent(e)) return
+      // store.fieldClick(obj.x, obj.y)
+      store.setEditKind(obj.kind)
+    },
+    editPuyoTouchStyle: function (obj) {
+      let s = 'position: absolute;'
+      s += ' top: ' + (obj.y - 2) + 'px;'
+      s += ' left: ' + (obj.x - 2) + 'px;'
+      s += ' width: 32px;'
+      s += ' height: 32px;'
+      if (obj.kind === this.state.editKind) s += ' border: solid 2px #ff0000;'
+      return s
     }
   }
 }
@@ -505,6 +589,16 @@ export default {
 }
 
 .openHamburger {
+  background-color:#bbcccc;
+}
+
+#editIcon {
+  position: absolute;
+  top: 0px;
+  left: 256px;
+}
+
+.editIconActive {
   background-color:#bbcccc;
 }
 
