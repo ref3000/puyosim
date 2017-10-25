@@ -52,7 +52,6 @@ class Chart {
   }
   set (turn, x, dir) {
     if (turn > 999) return
-    console.log('chart set', turn)
     this.chart[turn] = {
       x: x,
       dir: dir
@@ -60,9 +59,7 @@ class Chart {
     this._updateSize(turn)
   }
   setEditedField (turn, field) {
-    console.log('sef', turn, field)
     if (turn > 999) return
-    console.log('chart setEditedField', turn)
     if (field != null && field.copy != null) {
       this.editedFields[turn] = field.copy()
     } else {
@@ -82,7 +79,6 @@ class Chart {
     return this._size
   }
   normalize (next) {
-    console.log('normalize', this)
     let field = new Puyo.Field()
     for (let i = 0; i < this.size(); i++) {
       // 「ぷよ図編集」を処理
@@ -111,6 +107,7 @@ class Game {
   constructor () {
     this.field = new Puyo.Field()
     this.next = new Puyo.Next()
+    this.orgNext = new Puyo.Next(this.next._seed)
     this.ops = {
       pos: new Puyo.Pos(),
       dir: 0,
@@ -241,7 +238,6 @@ class Game {
     }
     this.ops.available = false
     // 設置
-    console.log(this)
     this.field.set(ap, this.next.get(this.turn).axis)
     this.field.set(sp, this.next.get(this.turn).sub)
     this.field.fall()
@@ -259,7 +255,7 @@ class Game {
     return
   }
   moveTurn (turnNum, opsSetFlag) {
-    console.log('moveTurn', turnNum, opsSetFlag)
+    // console.log('moveTurn', turnNum, opsSetFlag)
     if (turnNum < 0) return
     // Game初期化
     this.chain = 0
@@ -341,10 +337,11 @@ class Game {
     return this.field.canFall() || this.field.canFire()
   }
   setNextSeed (seed) {
-    this.next = new Puyo.Next(seed)
+    this.next.init(seed)
+    this.orgNext.init(seed)
   }
   setNextMode (mode) {
-    this.next.init(this.next._seed, mode)
+    // this.next.init(this.next._seed, mode)
   }
   editField (x, y, kind) {
     if (kind === Puyo.Kind.PEKE) kind = Puyo.Kind.BRANK
@@ -354,6 +351,9 @@ class Game {
     this.field.fall()
     this.chart.setEditedField(this.turn, this.field)
     this.chart.normalize(this.next)
+  }
+  editNext (turn, kind, isAxis) {
+    this.next.edit(turn, kind, isAxis)
   }
 }
 

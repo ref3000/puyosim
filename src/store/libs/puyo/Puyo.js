@@ -32,6 +32,7 @@ class Next {
     this.init(seed, mode)
   }
   init (seed, mode) {
+    // console.log('next init')
     if (mode == null) mode = 'random'
     this._mode = mode
     if (seed == null) {
@@ -42,7 +43,7 @@ class Next {
     this._random = new Random(this._seed)
     this._size = 1000
     this._puyos = []
-    console.log(this._seed, this._mode)
+    // console.log(this._seed, this._mode)
     for (let i = 0; i < this._size; i++) {
       this._puyos.push(new PuyoPair(this._nextKind(), this._nextKind()))
     }
@@ -64,6 +65,14 @@ class Next {
   }
   seed () {
     return this._seed
+  }
+  edit (turn, kind, isAxis) {
+    if (turn >= this._size || turn < 0) return
+    if (isAxis) {
+      this._puyos[turn].axis = kind
+    } else {
+      this._puyos[turn].sub = kind
+    }
   }
 }
 
@@ -112,6 +121,10 @@ class Field {
       for (let y = 1; y <= this.height; y++) {
         let p = this.get(new Pos(x, y))
         if (p === Kind.BRANK) continue
+        if (p === Kind.WALL) {
+          t = y + 1
+          continue
+        }
         this.set(new Pos(x, y), this.get(new Pos(x, t)))
         this.set(new Pos(x, t), p)
         if (t !== y) flag = true
@@ -124,7 +137,7 @@ class Field {
   canFall () {
     for (let x = 1; x <= this.width; x++) {
       for (let y = 2; y <= this.height; y++) {
-        if (this.isBrank(new Pos(x, y - 1)) && !this.isBrank(new Pos(x, y))) return true
+        if (this.isBrank(new Pos(x, y - 1)) && !this.isBrank(new Pos(x, y)) && this.get(new Pos(x, y)) !== Kind.WALL) return true
       }
     }
     return false

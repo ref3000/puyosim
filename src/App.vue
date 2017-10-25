@@ -3,22 +3,25 @@
     <div id="left_content">
       <div id="keyboard-description">
         <div id="keyboar-description-title">キーボード操作</div>
-        <ul>
-          <li>[←][→]：左右移動</li>
-          <li>[Z][X]：左右回転</li>
-          <li>[↓]：設置</li>
-          <li>[↑]：１手戻る</li>
-          <li>[N]：１手進む</li>
-          <li>[R]：初手に戻る</li>
-          <li>[T]：ツモを変えてリセット</li>
-        </ul>
+        <table class="descriptionTable">
+        <tr><td>[←][→]</td><td>左右移動</td></tr>
+        <tr><td>[Z][X]</td><td>左右回転</td></tr>
+        <tr><td>[↓]</td><td>設置</td></tr>
+        <tr><td>[↑]</td><td>１手戻る</td></tr>
+        <tr><td>[N]</td><td>１手進む</td></tr>
+        <tr><td>[R]</td><td>初手に戻る</td></tr>
+        <tr><td>[T]</td><td>ツモを変えてリセット</td></tr>
+        <tr><td>[E]</td><td>編集モード</td></tr>
+        <tr><td>[1-8]</td><td>ぷよ種選択（編集モード）</td></tr>
+        </table>
       </div>
     </div>
     <div id="main_content">
       <div id="top">
-        <div id="login-wait" v-if="state.isLoginWait">確認中...</div>
-        <div id="login" @click="login" v-if="!state.isLogin && !state.isLoginWait">ログイン</div>
-        <div id="logout" @click="logout" v-if="state.isLogin && !state.isLoginWait">{{state.userName}}</div>
+        <div id="login-wait" v-if="state.isLoginWait" @click="loginClick">確認中...</div>
+        <div id="login" v-if="!state.isLogin && !state.isLoginWait" @click="loginClick">ログイン<br>していません</div>
+        <div id="logout" v-if="state.isLogin && !state.isLoginWait" @click="loginClick">{{state.userName}}</div>
+        <div class="loginTriangle" @click="loginClick"></div>
         <div id="status">{{state.statusStr}}</div>
         <img id="editIcon" :class="{editIconActive: state.editView}" src="./assets/edit.png" v-on:touchstart="pushEditIcon" v-on:mousedown="pushEditIcon"></img>
         <img id="hun" :class="{openHamburger: state.hamburger}" src="./assets/hun02.png" v-on:touchstart="hamburger" v-on:mousedown="hamburger"></img>
@@ -55,6 +58,8 @@
               <img class="puyo" :src='puyoHistorySubSrc(obj, index)' style='left: 60px'>
               <div class="chart-pos">{{(obj.x>0&&obj.x<7)?obj.x:''}}</div>
               <div class="chart-dir">{{(obj.dir===0)?'↑':(obj.dir===1)?'→':(obj.dir===2)?'↓':(obj.dir===3)?'←':''}}</div>
+              <div class="leftEditChart" v-on:touchstart="editChartLeft($event, index)" v-on:mousedown="editChartLeft($event, index)"></div>
+              <div class="rightEditChart" v-on:touchstart="editChartRight($event, index)" v-on:mousedown="editChartRight($event, index)"></div>
             </div>
           </div>
         </div>
@@ -65,6 +70,10 @@
         <div class="bt" v-on:touchstart="b_right" v-on:mousedown="b_right" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">→</div>
         <div class="bt" v-on:touchstart="b_turnLeft" v-on:mousedown="b_turnLeft" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">L</div>
         <div class="bt" v-on:touchstart="b_turnRight" v-on:mousedown="b_turnRight" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">R</div>
+      </div>
+      <div class="loginView" v-if="state.loginView">
+        <div class="loginTile" @click="login">ログイン</div>
+        <div class="loginTile" @click="logout">ログアウト</div>
       </div>
       <div id="menu" v-if="state.hamburger">
         <div id="menu_back"></div>
@@ -96,11 +105,11 @@
           <div id="configCaptionSpeed">連鎖スピード</div>
           <input id="configSpeedBar" type="range" min="1" max="100" step="1" v-model="state.chainSpeed">
           <div id="configSpeedStr">{{state.chainSpeed}}</div>
-          <div id="configCaptionRevision">ツモ補正</div>
+          <div id="configCaptionRevision">ツモ補正（未実装）</div>
           <div id="configRevision">
-            <input type="radio" name="configRevision" v-model="state.revision" value="random">完全ランダム<br>
-            <input type="radio" name="configRevision" v-model="state.revision" value="tu">通仕様（128手均等）<br>
-            <input type="radio" name="configRevision" v-model="state.revision" value="classic">クラシック仕様（16手均等）
+            <input type="radio" name="configRevision" v-model="state.revision" value="random" disabled='disabled'>完全ランダム<br>
+            <input type="radio" name="configRevision" v-model="state.revision" value="tu" disabled='disabled'>通仕様（128手均等）<br>
+            <input type="radio" name="configRevision" v-model="state.revision" value="classic" disabled='disabled'>クラシック仕様（16手均等）
           </div>
           <div id="configSpeedStr">{{state.chainSpeed}}</div>
         </div>
@@ -163,6 +172,30 @@ function keydown (e) {
       e.preventDefault()
       // goBottom()
       return
+    case 49: // 1
+      store.setEditKind(Puyo.Kind.RED)
+      return
+    case 50: // 2
+      store.setEditKind(Puyo.Kind.GREEN)
+      return
+    case 51: // 3
+      store.setEditKind(Puyo.Kind.BLUE)
+      return
+    case 52: // 4
+      store.setEditKind(Puyo.Kind.YELLOW)
+      return
+    case 53: // 5
+      store.setEditKind(Puyo.Kind.PEKE)
+      return
+    case 54: // 6
+      store.setEditKind(Puyo.Kind.OJAMA)
+      return
+    case 55: // 7
+      store.setEditKind(Puyo.Kind.IRON)
+      return
+    case 56: // 8
+      store.setEditKind(Puyo.Kind.WALL)
+      return
     case 88: // x
       store.turnRight()
       return
@@ -175,7 +208,7 @@ function keydown (e) {
       store.debug()
       return
     case 69: // e
-      // console.log(store.state)
+      store.pushEditIcon()
       return
     case 78: // n
       store.moveTurnNext()
@@ -206,18 +239,18 @@ export default {
   },
   mounted: function () {
     document.title = store.state.title
-    window.addEventListener('keydown', keydown, true)
+    window.addEventListener('keydown', keydown, false)
     window.addEventListener('touchend', event => {
       // event.preventDefault()
       if (touchFlag) {
-        event.preventDefault()
+        event.stopPropagation()
       } else {
         touchFlag = true
         setTimeout(() => {
           touchFlag = false
-        }, 500)
+        }, 300)
       }
-    }, true)
+    }, false)
   },
   data: function () {
     return {
@@ -304,7 +337,7 @@ export default {
   watch: {
     state: {
       handler: function (obj) {
-        console.log('watch: state changed.')
+        // console.log('watch: state changed.')
         document.title = obj.title
       },
       deep: true
@@ -330,31 +363,31 @@ export default {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.moveLeft()
-      e.preventDefault()
+      e.stopPropagation()
     },
     b_right: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.moveRight()
-      e.preventDefault()
+      e.stopPropagation()
     },
     b_down: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.setDown()
-      e.preventDefault()
+      e.stopPropagation()
     },
     b_turnLeft: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.turnLeft()
-      e.preventDefault()
+      e.stopPropagation()
     },
     b_turnRight: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.turnRight()
-      e.preventDefault()
+      e.stopPropagation()
     },
     b_untouch: function (e) {
       setUntouchStyle(e)
@@ -362,17 +395,16 @@ export default {
     b_chart: function (e, i) {
       if (!isClickDownEvent(e)) return
       store.moveTurn(i)
-      e.preventDefault()
     },
     b_prev: function (e) {
       if (!isClickDownEvent(e)) return
       store.moveTurnPrev()
-      e.preventDefault()
+      e.stopPropagation()
     },
     b_next: function (e) {
       if (!isClickDownEvent(e)) return
       store.moveTurnNext()
-      e.preventDefault()
+      e.stopPropagation()
     },
     b_debug: function (e) {
       if (!isClickDownEvent(e)) return
@@ -380,7 +412,7 @@ export default {
     bTweet: function (e) {
       if (!isClickDownEvent(e)) return
       store.tweet()
-      e.preventDefault()
+      e.stopPropagation()
     },
     puyoSrc: function (obj) {
       if (obj.state === 'extinction') return require('./assets/puyo_c.png')
@@ -452,25 +484,26 @@ export default {
       if (!isClickDownEvent(e)) return
       store.openConfigView()
     },
-    tDownload: function (e) {
-      let content = 'あいうえお'
-      let blob = new Blob([content], {'type': 'text/plain'})
-      console.log(blob)
-      console.log(window.navigator.msSaveBlob)
-      console.log(window.URL)
-      console.log(window.URL.createObjectURL(blob))
-      if (window.navigator.msSaveBlob) {
-        window.navigator.msSaveBlob(blob, 'test.txt')
-        window.navigator.msSaveOrOpenBlob(blob, 'test.txt')
-      } else {
-        document.getElementById('download').href = window.URL.createObjectURL(blob)
-      }
-    },
+    // tDownload: function (e) {
+    //   let content = 'あいうえお'
+    //   let blob = new Blob([content], {'type': 'text/plain'})
+    //   // console.log(blob)
+    //   // console.log(window.navigator.msSaveBlob)
+    //   // console.log(window.URL)
+    //   // console.log(window.URL.createObjectURL(blob))
+    //   if (window.navigator.msSaveBlob) {
+    //     window.navigator.msSaveBlob(blob, 'test.txt')
+    //     window.navigator.msSaveOrOpenBlob(blob, 'test.txt')
+    //   } else {
+    //     document.getElementById('download').href = window.URL.createObjectURL(blob)
+    //   }
+    // },
     login: function () {
       store.login()
     },
     logout: function () {
       store.logout()
+      store.toggleLoginView()
     },
     clickTweetCheck: function (e) {
       if (e.toElement.checked) {
@@ -505,6 +538,17 @@ export default {
       s += ' height: 32px;'
       if (obj.kind === this.state.editKind) s += ' border: solid 2px #ff0000;'
       return s
+    },
+    editChartLeft: function (e, index) {
+      if (!isClickDownEvent(e)) return
+      store.editNextAxis(index)
+    },
+    editChartRight: function (e, index) {
+      if (!isClickDownEvent(e)) return
+      store.editNextSub(index)
+    },
+    loginClick: function (e) {
+      store.toggleLoginView()
     }
   }
 }
@@ -542,8 +586,8 @@ export default {
 
 #keyboard-description {
   margin-top: 30px;
-  margin-left: 100px;
-  width: 200px;
+  margin-left: 20px;
+  width: 260px;
   background-color: #aaffaa;
 }
 
@@ -557,16 +601,18 @@ export default {
 #login {
   position: absolute;
   top: 3px;
-  left: 5px;
-  color: #0a3bff;
+  left: 20px;
+  color: #aaaaaa;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: left;
 }
 
 #login-wait {
   position: absolute;
   top: 3px;
-  left: 5px;
+  left: 20px;
   color: #aaaaaa;
   font-weight: bold;
   font-size: 14px;
@@ -575,10 +621,20 @@ export default {
 #logout {
   position: absolute;
   top: 3px;
-  left: 5px;
+  left: 20px;
   color: #0a3bff;
   font-weight: bold;
   font-size: 14px;
+}
+
+.loginTriangle{
+  position: absolute;
+	width: 0;
+	height: 0;
+  top: 8px;
+  left: 4px;
+	border: 6px solid transparent;
+	border-top: 14px solid #666666;
 }
 
 #status {
@@ -941,6 +997,42 @@ export default {
   position: absolute;
   top: 270px;
   left: 20px;
+}
+
+.leftEditChart {
+  position: absolute;
+  height: 32px;
+  width: 32px;
+  left: 28px;
+}
+
+.rightEditChart {
+  position: absolute;
+  height: 32px;
+  width: 32px;
+  left: 60px;
+}
+
+.loginView {
+  position: absolute;
+  margin: 0 auto;
+  top: 30px;
+  width: 100px;
+  height: 75px;
+  background-color: #b5d1ff;
+  opacity: 0.92;
+}
+
+.loginTile {
+  position: relative;
+  margin: 5px;
+  width: 90px;
+  height: 30px;
+  background-color: #ffffff;
+  line-height: 30px;
+  font-size: 16px;
+  font-weight: bold;
+  opacity: 0.92;
 }
 
 </style>

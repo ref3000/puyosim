@@ -16,13 +16,14 @@ let provider = new firebase.auth.TwitterAuthProvider()
 // firebase.auth().useDeviceLanguage()
 
 firebase.auth().getRedirectResult().then(function (result) {
-  console.log('redirectResult()', result)
+  // console.log('redirectResult()', result)
   if (result.credential) {
     let t = result.credential.accessToken
     let s = result.credential.secret
     let uid = result.user.uid
     firebase.database().ref('users/' + uid + '/tw_key').set(t)
     firebase.database().ref('users/' + uid + '/tw_skey').set(s)
+    firebase.database().ref('users/' + uid + '/tw_dispName').set(result.user.displayName)
     // console.log(result.credentia)
   }
   // The signed-in user info.
@@ -37,7 +38,7 @@ let isLogin = false
 let key = null
 let skey = null
 firebase.auth().onAuthStateChanged(function (user) {
-  console.log('auth state changed!', user)
+  // console.log('auth state changed!', user)
   if (user) {
     loginFunc(user)
     isLogin = true
@@ -67,7 +68,6 @@ class FB {
   }
   tweet (status, base64str, callback) {
     if (base64str == null) base64str = null
-    console.log('key', key)
     if (!isLogin) {
       callback(false)
       return
@@ -79,7 +79,7 @@ class FB {
       data: base64str
     })
     .then(function (response) {
-      console.log(response)
+      // console.log(response)
       if (callback != null) callback(true)
     })
     .catch(function (error) {

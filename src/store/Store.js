@@ -19,7 +19,7 @@ fb.onLogout(function () {
 })
 
 let state = {
-  title: '完成度80%くらい',
+  title: '完成度85%くらい',
   ops: {
     pos: {
       x: -1,
@@ -54,7 +54,8 @@ let state = {
   revision: 'random',
   statusStr: '',
   editView: false,
-  editKind: Puyo.Kind.RED
+  editKind: Puyo.Kind.RED,
+  loginView: false
 }
 
 function init (hash) {
@@ -72,6 +73,14 @@ function init (hash) {
       for (let i = 0; i < cs.length; i++) {
         game.chart.set(i, cs[i].set.x, cs[i].set.dir)
         if (cs[i].editField != null) game.chart.setEditedField(i, cs[i].editField)
+      }
+    }
+    if (toks[2] != null && toks[2].length > 0) {
+      for (let i = 0; i < toks[2].length; i += 2) {
+        let akind = Util.base64ctoNum(toks[2][i])
+        let skind = Util.base64ctoNum(toks[2][i + 1])
+        game.editNext(i / 2, akind, true)
+        game.editNext(i / 2, skind, false)
       }
     }
   }
@@ -169,44 +178,44 @@ function _getChartFromHash (c) {
     case 22: return {type: 'set', x: 6, dir: 1}
     case 23: return {type: 'set', x: 6, dir: 2}
     case 24: return {type: 'set', x: 6, dir: 3}
-    case 25: return {type: 'editstart'}
-    case 26: return {type: 'editend'}
+    case 25: return {type: 'edit', kind: Puyo.Kind.BRANK}
+    case 26: return {type: 'edit', kind: Puyo.Kind.RED}
+    case 27: return {type: 'edit', kind: Puyo.Kind.GREEN}
+    case 28: return {type: 'edit', kind: Puyo.Kind.BLUE}
+    case 29: return {type: 'edit', kind: Puyo.Kind.YELLOW}
+    case 30: return {type: 'edit', kind: Puyo.Kind.PURPLE}
+    case 31: return {type: 'edit', kind: Puyo.Kind.IRON}
+    case 32: return {type: 'edit', kind: Puyo.Kind.OJAMA}
+    case 33: return {type: 'edit', kind: Puyo.Kind.WALL}
+    case 34: return {type: 'edit', kind: Puyo.Kind.PEKE}
   }
   return {}
 }
-function strToField (str) {
+function arrayToField (array) {
   let field = new Puyo.Field()
-  for (let i = 0; i < str.length; i++) {
+  for (let i = 0; i < array.length; i++) {
     let x = (i % 6) + 1
     let y = Math.floor(i / 6) + 1
-    field.set(new Puyo.Pos(x, y), Number(str[i]))
+    field.set(new Puyo.Pos(x, y), array[i])
   }
   return field
 }
 function getChartFromHash (hashStr) {
-  let editFlag = false
-  let editStr = ''
+  let editArray = []
   let charts = []
   for (let i = 0; i < hashStr.length; i++) {
     let c = hashStr[i]
     let obj = _getChartFromHash(c)
-    if (editFlag && obj.type !== 'editend') {
-      editStr += c
-      continue
-    }
     switch (obj.type) {
       case 'set':
         charts.push({set: {x: obj.x, dir: obj.dir}})
-        if (editStr.length > 0) {
-          charts[charts.length - 1].editField = strToField(editStr)
-          editStr = ''
+        if (editArray.length > 0) {
+          charts[charts.length - 1].editField = arrayToField(editArray)
+          editArray = []
         }
         break
-      case 'editstart':
-        editFlag = true
-        break
-      case 'editend':
-        editFlag = false
+      case 'edit':
+        editArray.push(obj.kind)
         break
     }
   }
@@ -223,14 +232,28 @@ function _getHashFromChartEdit (field) {
   for (let y = 1; y <= field.Height(); y++) {
     for (let x = 1; x <= field.Width(); x++) {
       let kind = field.get(new Puyo.Pos(x, y))
-      s += kind
+      s += Util.numToBase64c(25 + kind)
     }
   }
   for (let i = s.length - 1; i >= 0; i--) {
-    if (s[i] !== '0') break
+    if (s[i] !== 'z') break
     s = s.slice(0, -1)
   }
-  return 'z' + s + 'A'
+  return s
+}
+function _getHashNextEdit (next, orgNext) {
+  let s = ''
+  let editedFlag = false
+  for (let i = next.size() - 1; i >= 0; i--) {
+    let pp = next.get(i)
+    let op = orgNext.get(i)
+    if (pp.axis !== op.axis || pp.sub !== op.sub) editedFlag = true
+    if (editedFlag) {
+      s += Util.numToBase64c(pp.sub)
+      s += Util.numToBase64c(pp.axis)
+    }
+  }
+  return s.split('').reverse().join('')
 }
 function getHashStr () {
   let chart = game.chart
@@ -239,6 +262,8 @@ function getHashStr () {
     str += _getHashFromChartEdit(chart.getEditedField(i))
     str += _getHashFromChart(chart.get(i))
   }
+  let ne = _getHashNextEdit(game.next, game.orgNext)
+  if (ne.length > 0) str += ('!' + ne)
   return str
 }
 
@@ -328,25 +353,27 @@ export default {
     }
   },
   moveTurn (turnNum) {
+    game.saveField()
     game.moveTurn(turnNum, true)
     updateOps()
     updateField()
     updateInfo()
   },
   moveTurnPrev () {
+    game.saveField()
     game.moveTurn(game.turn - 1, true)
     updateOps()
     updateField()
     updateInfo()
   },
   moveTurnNext () {
+    game.saveField()
     game.moveTurn(game.turn + 1, true)
     updateOps()
     updateField()
     updateInfo()
   },
   toggleNextDisplay (pos, isAxis) {
-    console.log(pos, isAxis)
     if (isAxis) {
       state.nextDisplay[pos].axis = !state.nextDisplay[pos].axis
     } else {
@@ -371,10 +398,10 @@ export default {
     state.hamburger = true
   },
   createGif () {
-    console.log('createGif!')
+    // console.log('createGif!')
     if (state.gifProcessing === true) return
     state.gifProcessing = true
-    console.log('start')
+    // console.log('start')
 
     let gif = new Gif({
       repeat: -1,
@@ -401,6 +428,10 @@ export default {
     pp.src = require('../assets/puyo_p.png')
     let po = new Image()
     po.src = require('../assets/puyo_o.png')
+    let pi = new Image()
+    pi.src = require('../assets/puyo_i.png')
+    let pw = new Image()
+    pw.src = require('../assets/wall01.png')
 
     let turn = game.turn
     for (let i = 0; i <= turn; i++) {
@@ -430,10 +461,16 @@ export default {
             case Puyo.Kind.OJAMA:
               ctx.drawImage(po, xx, yy)
               break
+            case Puyo.Kind.IRON:
+              ctx.drawImage(pi, xx, yy)
+              break
+            case Puyo.Kind.WALL:
+              ctx.drawImage(pw, xx, yy)
+              break
           }
         }
       }
-      gif.addFrame(cv, {copy: true, delay: 500})
+      gif.addFrame(cv, {copy: true, delay: (101 - state.chainSpeed) * 10})
     }
 
     gif.on('finished', function (blob) {
@@ -441,7 +478,6 @@ export default {
       reader.readAsDataURL(blob)
       reader.onloadend = function () {
         let base64data = reader.result
-        console.log(base64data)
         state.gifSrc = base64data
         state.gifProcessing = false
       }
@@ -465,6 +501,7 @@ export default {
   },
   openTweetView () {
     state.tweetText = state.chain + '連鎖' + state.score + '点（' + (state.turn + 1) + '手）\n'
+    state.tweetText += '#puyosim\n'
     state.tweetText += 'https://sim.refpuyo.net/#' + state.hashStr
     state.tweetView = true
     if (state.tweetChecked) this.createGif()
@@ -538,8 +575,26 @@ export default {
     if (!state.editView) return
     game.editField(x, y, state.editKind)
     updateField()
+    updateInfo()
   },
   setEditKind (kind) {
     state.editKind = kind
+  },
+  editNextAxis (turn) {
+    if (!state.editView) return
+    if (state.editKind === Puyo.Kind.PEKE) return
+    if (state.editKind === Puyo.Kind.WALL) return
+    game.editNext(turn, state.editKind, true)
+    updateNext()
+  },
+  editNextSub (turn) {
+    if (!state.editView) return
+    if (state.editKind === Puyo.Kind.PEKE) return
+    if (state.editKind === Puyo.Kind.WALL) return
+    game.editNext(turn, state.editKind, false)
+    updateNext()
+  },
+  toggleLoginView () {
+    state.loginView = !state.loginView
   }
 }
