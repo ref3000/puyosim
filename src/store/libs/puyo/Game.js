@@ -220,8 +220,14 @@ class Game {
     if (this.ops.dir === 1 || this.ops.dir === 3) return false
     let ap = this.axisPos()
     let apd = newPos(ap.x, ap.y - 1)
+    let apl = newPos(ap.x - 1, ap.y)
+    let apr = newPos(ap.x + 1, ap.y)
     if (this.ops.dir === 0) {
-      if (!this.field.isBrank(apd)) this.ops.pos.y++
+      if (!this.field.isBrank(apd)) {
+        this.ops.pos.y++
+      } else {
+        if (ap.x === 3 && ap.y === 12 && !this.field.isBrank(apl) && !this.field.isBrank(apr)) this.ops.pos.y++
+      }
     }
     this.ops.dir = (this.ops.dir + 2) % 4
   }
@@ -238,9 +244,10 @@ class Game {
     }
     this.ops.available = false
     // 設置
-    this.field.set(ap, this.next.get(this.turn).axis)
-    this.field.set(sp, this.next.get(this.turn).sub)
-    this.field.fall()
+    // this.field.set(ap, this.next.get(this.turn).axis)
+    // this.field.set(sp, this.next.get(this.turn).sub)
+    // this.field.fall()
+    setOpsToField(this.field, this.ops.pos.x, this.ops.dir, this.next.get(this.turn))
     // 履歴をセット
     this.chart.set(this.turn, this.ops.pos.x, this.ops.dir)
     // 発火可能なら発火処理

@@ -19,7 +19,7 @@ fb.onLogout(function () {
 })
 
 let state = {
-  title: '完成度85%くらい',
+  title: 'ぷよシミュWeb',
   ops: {
     pos: {
       x: -1,

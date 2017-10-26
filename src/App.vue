@@ -18,10 +18,10 @@
     </div>
     <div id="main_content">
       <div id="top">
-        <div id="login-wait" v-if="state.isLoginWait" @click="loginClick">確認中...</div>
-        <div id="login" v-if="!state.isLogin && !state.isLoginWait" @click="loginClick">ログイン<br>していません</div>
-        <div id="logout" v-if="state.isLogin && !state.isLoginWait" @click="loginClick">{{state.userName}}</div>
-        <div class="loginTriangle" @click="loginClick"></div>
+        <div id="login-wait" v-if="state.isLoginWait" v-on:touchstart="loginClick" v-on:mousedown="loginClick">確認中...</div>
+        <div id="login" v-if="!state.isLogin && !state.isLoginWait" v-on:touchstart="loginClick" v-on:mousedown="loginClick">ログイン<br>していません</div>
+        <div id="logout" v-if="state.isLogin && !state.isLoginWait" v-on:touchstart="loginClick" v-on:mousedown="loginClick">{{state.userName}}</div>
+        <div class="loginTriangle" v-on:touchstart="loginClick" v-on:mousedown="loginClick"></div>
         <div id="status">{{state.statusStr}}</div>
         <img id="editIcon" :class="{editIconActive: state.editView}" src="./assets/edit.png" v-on:touchstart="pushEditIcon" v-on:mousedown="pushEditIcon"></img>
         <img id="hun" :class="{openHamburger: state.hamburger}" src="./assets/hun02.png" v-on:touchstart="hamburger" v-on:mousedown="hamburger"></img>
@@ -72,8 +72,8 @@
         <div class="bt" v-on:touchstart="b_turnRight" v-on:mousedown="b_turnRight" v-on:touchend="b_untouch" v-on:mouseup="b_untouch" v-on:mouseout="b_untouch">R</div>
       </div>
       <div class="loginView" v-if="state.loginView">
-        <div class="loginTile" @click="login">ログイン</div>
-        <div class="loginTile" @click="logout">ログアウト</div>
+        <div class="loginTile" v-on:touchstart="login" v-on:mousedown="login">ログイン</div>
+        <div class="loginTile" v-on:touchstart="logout" v-on:mousedown="logout">ログアウト</div>
       </div>
       <div id="menu" v-if="state.hamburger">
         <div id="menu_back"></div>
@@ -96,7 +96,7 @@
           <div id="menu_area_tweet_desc">リンクをあなたの<br>フォロワーに共有する</div>
           <textarea id="menu_area_tweet_text" v-model="state.tweetText"></textarea>
           <div id="menu_area_tweet_checkarea">
-            <input type="checkbox" id="menu_area_tweet_check" v-model="state.tweetChecked" @click="clickTweetCheck">
+            <input type="checkbox" id="menu_area_tweet_check" v-model="state.tweetChecked" v-on:touchstart="clickTweetCheck">
             現在手までのGIF画像を添付
           </div>
           <button type=button class="menu_area_tweet_button" :class="{tweetProcessing: state.gifProcessing}" v-on:touchstart="bTweet" v-on:mousedown="bTweet">{{(state.gifProcessing)?'画像生成中':'ツイート'}}</button>
@@ -231,25 +231,38 @@ function goBottom () {
 }
 goBottom()
 
-let touchFlag = false
+// let touchFlag = false
 export default {
   name: 'app',
   components: {
     // PuyoField
   },
   mounted: function () {
+    this.$ga.page('/')
     document.title = store.state.title
     window.addEventListener('keydown', keydown, false)
     window.addEventListener('touchend', event => {
-      // event.preventDefault()
-      if (touchFlag) {
-        event.stopPropagation()
-      } else {
-        touchFlag = true
-        setTimeout(() => {
-          touchFlag = false
-        }, 300)
-      }
+      if (event.target.type === 'checkbox') return
+      if (event.target.type === 'textarea') return
+      // console.log(event)
+      event.preventDefault()
+      // if (touchFlag) {
+      //   event.preventDefault()
+      // } else {
+      //   touchFlag = true
+      //   setTimeout(() => {
+      //     touchFlag = false
+      //   }, 5000)
+      // }
+      // event.stopPropagation()
+      // if (touchFlag) {
+      //   event.stopPropagation()
+      // } else {
+      //   touchFlag = true
+      //   setTimeout(() => {
+      //     touchFlag = false
+      //   }, 300)
+      // }
     }, false)
   },
   data: function () {
@@ -356,6 +369,11 @@ export default {
           el.scrollTop = turnTopMax - 32 * 8
         }
       }, 20) // この時点ではまだ生成されてないから苦肉の策
+    },
+    'state.tweetChecked': function (checked) {
+      if (checked) {
+        store.createGif()
+      }
     }
   },
   methods: {
@@ -363,31 +381,31 @@ export default {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.moveLeft()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     b_right: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.moveRight()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     b_down: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.setDown()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     b_turnLeft: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.turnLeft()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     b_turnRight: function (e) {
       if (!isClickDownEvent(e)) return
       setTouchStyle(e)
       store.turnRight()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     b_untouch: function (e) {
       setUntouchStyle(e)
@@ -399,12 +417,12 @@ export default {
     b_prev: function (e) {
       if (!isClickDownEvent(e)) return
       store.moveTurnPrev()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     b_next: function (e) {
       if (!isClickDownEvent(e)) return
       store.moveTurnNext()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     b_debug: function (e) {
       if (!isClickDownEvent(e)) return
@@ -412,7 +430,7 @@ export default {
     bTweet: function (e) {
       if (!isClickDownEvent(e)) return
       store.tweet()
-      e.stopPropagation()
+      // e.stopPropagation()
     },
     puyoSrc: function (obj) {
       if (obj.state === 'extinction') return require('./assets/puyo_c.png')
@@ -477,38 +495,25 @@ export default {
     },
     tTweet: function (e) {
       if (!isClickDownEvent(e)) return
-      event.preventDefault()
+      // e.preventDefault()
       store.openTweetView()
     },
     tConfig: function (e) {
       if (!isClickDownEvent(e)) return
       store.openConfigView()
     },
-    // tDownload: function (e) {
-    //   let content = 'あいうえお'
-    //   let blob = new Blob([content], {'type': 'text/plain'})
-    //   // console.log(blob)
-    //   // console.log(window.navigator.msSaveBlob)
-    //   // console.log(window.URL)
-    //   // console.log(window.URL.createObjectURL(blob))
-    //   if (window.navigator.msSaveBlob) {
-    //     window.navigator.msSaveBlob(blob, 'test.txt')
-    //     window.navigator.msSaveOrOpenBlob(blob, 'test.txt')
-    //   } else {
-    //     document.getElementById('download').href = window.URL.createObjectURL(blob)
-    //   }
-    // },
-    login: function () {
+    login: function (e) {
+      if (!isClickDownEvent(e)) return
       store.login()
     },
-    logout: function () {
+    logout: function (e) {
+      if (!isClickDownEvent(e)) return
       store.logout()
       store.toggleLoginView()
     },
     clickTweetCheck: function (e) {
-      if (e.toElement.checked) {
-        store.createGif()
-      }
+      if (!isClickDownEvent(e)) return
+      e.toElement.checked = !e.toElement.checked
     },
     pushEditIcon: function (e) {
       if (!isClickDownEvent(e)) return
@@ -532,10 +537,10 @@ export default {
     },
     editPuyoTouchStyle: function (obj) {
       let s = 'position: absolute;'
-      s += ' top: ' + (obj.y - 2) + 'px;'
-      s += ' left: ' + (obj.x - 2) + 'px;'
-      s += ' width: 32px;'
-      s += ' height: 32px;'
+      s += ' top: ' + (obj.y) + 'px;'
+      s += ' left: ' + (obj.x) + 'px;'
+      s += ' width: 28px;'
+      s += ' height: 28px;'
       if (obj.kind === this.state.editKind) s += ' border: solid 2px #ff0000;'
       return s
     },
@@ -548,6 +553,7 @@ export default {
       store.editNextSub(index)
     },
     loginClick: function (e) {
+      if (!isClickDownEvent(e)) return
       store.toggleLoginView()
     }
   }
@@ -570,6 +576,8 @@ export default {
 #main_content {
   margin: 0;
   width: 320px;
+  max-width: 320px;
+  min-width: 320px;
 }
 
 #left_content {
