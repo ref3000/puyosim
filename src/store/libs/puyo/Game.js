@@ -119,6 +119,9 @@ class Game {
     this.sumScore = 0
     this.chain = 0
     this.moveTurn(0)
+    this.statisticsMaxChain = 0
+    this.statisticsMaxScore = 0
+    this.statisticsMaxConcurrent = 0
   }
   axisPos () {
     return this.ops.pos
@@ -282,7 +285,8 @@ class Game {
       setOpsToField(this.field, ch.x, ch.dir, this.next.get(i))
       if (!this.field.canFire()) continue
       this.score = 0
-      for (let i = 1; i < 20; i++) {
+      let i
+      for (i = 1; i < 20; i++) {
         let info = this.field.stepFire()
         let score = calcScore(info.num, info.color, info.connections, i)
         this.chain = i
@@ -291,6 +295,7 @@ class Game {
         this.field.fall()
         if (!this.field.canFire()) break
       }
+      if (this.statisticsMaxChain <= i) this.statisticsMaxChain = i
     }
     // 移動後の履歴状態に応じて処理
     let ch = this.chart.get(turnNum)

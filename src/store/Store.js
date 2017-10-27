@@ -55,7 +55,10 @@ let state = {
   statusStr: '',
   editView: false,
   editKind: Puyo.Kind.RED,
-  loginView: false
+  loginView: false,
+  statisticsMaxChain: 0,
+  statisticsMaxScore: 0,
+  statisticsMaxConcurrent: 0
 }
 
 function init (hash) {
@@ -149,6 +152,9 @@ function updateInfo () {
   state.history = h
   state.hashStr = getHashStr()
   window.location.hash = state.hashStr
+  // state.statisticsMaxChain = game.statisticsMaxChain
+  // state.statisticsMaxScore = game.statisticsMaxScore
+  // state.statisticsMaxConcurrent = game.statisticsMaxConcurrent
 }
 
 function _getChartFromHash (c) {

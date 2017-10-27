@@ -116,6 +116,12 @@
       </div>
     </div>
     <div id="right_content">
+      <div class="statisticsArea">
+        <div>統計</div>
+        <div>最大連鎖：{{state.statisticsMaxChain}}連鎖</div>
+        <div>最大同時消し：{{state.statisticsMaxConcurrent}}個</div>
+        <div>最大得点：{{state.statisticsMaxScore}}点</div>
+      </div>
     </div>
   </div>
 </template>
@@ -1043,4 +1049,12 @@ export default {
   opacity: 0.92;
 }
 
+.statisticsArea {
+  position: relative;
+  margin-top: 30px;
+  margin-left: 20px;
+  width: 180px;
+  height: 200px;
+  background-color: #ccdfff;
+}
 </style>
