@@ -239,6 +239,15 @@ class Field {
     }
     return true
   }
+  isAllClear () {
+    for (let y = 1; y <= this.height; y++) {
+      for (let x = 1; x <= this.width; x++) {
+        let pos = new Pos(x, y)
+        if (this.get(pos) !== Kind.BRANK) return false
+      }
+    }
+    return true
+  }
 }
 
 export default {

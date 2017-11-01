@@ -58,7 +58,18 @@ let state = {
   loginView: false,
   statisticsMaxChain: 0,
   statisticsMaxScore: 0,
-  statisticsMaxConcurrent: 0
+  statisticsMaxConcurrent: 0,
+  statisticsAllClear: 0,
+  statisticsCount: 0,
+  nazoStatusStr: '',
+  nazoCondition: {},
+  nazoMode: '未設定',
+  nazoAllClear: 1,
+  nazoTurn: 3,
+  nazoChain: 4,
+  nazoConcurrent: 5,
+  nazoCount: 6,
+  nazoClear: false
 }
 
 function init (hash) {
@@ -84,6 +95,35 @@ function init (hash) {
         let skind = Util.base64ctoNum(toks[2][i + 1])
         game.editNext(i / 2, akind, true)
         game.editNext(i / 2, skind, false)
+      }
+    }
+    if (toks[3] != null && toks[3].length > 0) {
+      switch (toks[3].slice(0, 1)) {
+        case 'a':
+          state.nazoTurn = Util.base64stoNum(toks[3].slice(1))
+          state.nazoMode = '全消し'
+          break
+        case 'b':
+          state.nazoTurn = Util.base64stoNum(toks[3].slice(1))
+          state.nazoMode = '連鎖'
+          break
+        case 'c':
+          state.nazoTurn = Util.base64stoNum(toks[3].slice(1))
+          state.nazoMode = '同時消し'
+          break
+        case 'd':
+          state.nazoTurn = Util.base64stoNum(toks[3].slice(1))
+          state.nazoMode = '個数'
+          break
+      }
+    }
+    if (toks[4] != null && toks[4].length > 0) {
+      switch (state.nazoMode) {
+        case '未設定': break
+        case '全消し': state.nazoClear = 1; break
+        case '連鎖': state.nazoChain = Util.base64stoNum(toks[4]); break
+        case '同時消し': state.nazoConcurrent = Util.base64stoNum(toks[4]); break
+        case '個数': state.nazoCount = Util.base64stoNum(toks[4]); break
       }
     }
   }
@@ -152,9 +192,23 @@ function updateInfo () {
   state.history = h
   state.hashStr = getHashStr()
   window.location.hash = state.hashStr
-  // state.statisticsMaxChain = game.statisticsMaxChain
-  // state.statisticsMaxScore = game.statisticsMaxScore
-  // state.statisticsMaxConcurrent = game.statisticsMaxConcurrent
+  state.statisticsMaxChain = game.statisticsMaxChain
+  state.statisticsMaxScore = game.statisticsMaxScore
+  state.statisticsMaxConcurrent = game.statisticsMaxConcurrent
+  state.statisticsAllClear = game.statisticsAllClear
+  state.statisticsCount = game.statisticsCount
+  state.nazoClear = checkNazoClear()
+}
+
+function checkNazoClear () {
+  switch (state.nazoMode) {
+    case '未設定': return false
+    case '全消し': return game.turn <= state.nazoTurn && game.statisticsAllClear > 0
+    case '連鎖': return game.turn <= state.nazoTurn && state.nazoChain <= game.statisticsMaxChain
+    case '同時消し': return game.turn <= state.nazoTurn && state.nazoConcurrent <= game.statisticsMaxConcurrent
+    case '個数': return game.turn <= state.nazoTurn && state.nazoCount <= game.statisticsCount
+  }
+  return false
 }
 
 function _getChartFromHash (c) {
@@ -261,6 +315,16 @@ function _getHashNextEdit (next, orgNext) {
   }
   return s.split('').reverse().join('')
 }
+function _getHashNazo () {
+  switch (state.nazoMode) {
+    case '未設定': return ''
+    case '全消し': return 'a' + Util.numToBase64s(state.nazoTurn) + '!'
+    case '連鎖': return 'b' + Util.numToBase64s(state.nazoTurn) + '!' + Util.numToBase64s(state.nazoChain)
+    case '同時消し': return 'c' + Util.numToBase64s(state.nazoTurn) + '!' + Util.numToBase64s(state.nazoConcurrent)
+    case '個数': return 'd' + Util.numToBase64s(state.nazoTurn) + '!' + Util.numToBase64s(state.nazoCount)
+  }
+  return ''
+}
 function getHashStr () {
   let chart = game.chart
   let str = Util.numToBase64s(game.next.seed()) + '!'
@@ -269,7 +333,10 @@ function getHashStr () {
     str += _getHashFromChart(chart.get(i))
   }
   let ne = _getHashNextEdit(game.next, game.orgNext)
-  if (ne.length > 0) str += ('!' + ne)
+  str += '!'
+  if (ne.length > 0) str += ne
+  let nazo = _getHashNazo(game.next, game.orgNext)
+  if (nazo.length > 0) str += ('!' + nazo)
   return str
 }
 
@@ -411,12 +478,12 @@ export default {
 
     let gif = new Gif({
       repeat: -1,
-      width: 192,
+      width: 192 + 64,
       height: 416
     })
 
     let cv = document.createElement('canvas')
-    cv.width = 192
+    cv.width = 192 + 64
     cv.height = 416
     let ctx = cv.getContext('2d')
 
@@ -442,40 +509,35 @@ export default {
     let turn = game.turn
     for (let i = 0; i <= turn; i++) {
       ctx.drawImage(back, 0, 0)
-      game.moveTurn(i)
+      game.moveTurn(i, true)
+      // Field
       for (let y = 1; y <= game.field.height; y++) {
         for (let x = 1; x <= game.field.width; x++) {
           let k = game.field.get(new Puyo.Pos(x, y))
           let xx = (x - 1) * 32
           let yy = (13 - y) * 32
-          switch (k) { // TODO: 定義の集約
-            case Puyo.Kind.RED:
-              ctx.drawImage(pr, xx, yy)
-              break
-            case Puyo.Kind.BLUE:
-              ctx.drawImage(pb, xx, yy)
-              break
-            case Puyo.Kind.GREEN:
-              ctx.drawImage(pg, xx, yy)
-              break
-            case Puyo.Kind.YELLOW:
-              ctx.drawImage(py, xx, yy)
-              break
-            case Puyo.Kind.PURPLE:
-              ctx.drawImage(pp, xx, yy)
-              break
-            case Puyo.Kind.OJAMA:
-              ctx.drawImage(po, xx, yy)
-              break
-            case Puyo.Kind.IRON:
-              ctx.drawImage(pi, xx, yy)
-              break
-            case Puyo.Kind.WALL:
-              ctx.drawImage(pw, xx, yy)
-              break
-          }
+          this._drawPuyo(ctx, xx, yy, k)
         }
       }
+      // 現在手
+      let ap = game.axisPos()
+      let sp = game.subPos()
+      if (ap != null || ap.x > 0) {
+        let pp = game.next.get(i)
+        let xx = (ap.x - 1) * 32
+        let yy = (13 - ap.y) * 32
+        this._drawPuyo(ctx, xx, yy, pp.axis)
+        xx = (sp.x - 1) * 32
+        yy = (13 - sp.y) * 32
+        this._drawPuyo(ctx, xx, yy, pp.sub)
+      }
+      // NEXT
+      let n1pp = game.next.get(i + 1)
+      let n2pp = game.next.get(i + 2)
+      this._drawPuyo(ctx, 192, 32, n1pp.axis)
+      this._drawPuyo(ctx, 192, 0, n1pp.sub)
+      this._drawPuyo(ctx, 224, 32, n2pp.axis)
+      this._drawPuyo(ctx, 224, 0, n2pp.sub)
       gif.addFrame(cv, {copy: true, delay: (101 - state.chainSpeed) * 10})
     }
 
@@ -492,6 +554,34 @@ export default {
       // state.gifSrc = url
     })
     gif.render()
+  },
+  _drawPuyo (ctx, x, y, kind) {
+    switch (kind) { // TODO: 定義の集約
+      case Puyo.Kind.RED:
+        ctx.drawImage(imgpr, x, y)
+        break
+      case Puyo.Kind.BLUE:
+        ctx.drawImage(imgpb, x, y)
+        break
+      case Puyo.Kind.GREEN:
+        ctx.drawImage(imgpg, x, y)
+        break
+      case Puyo.Kind.YELLOW:
+        ctx.drawImage(imgpy, x, y)
+        break
+      case Puyo.Kind.PURPLE:
+        ctx.drawImage(imgpp, x, y)
+        break
+      case Puyo.Kind.OJAMA:
+        ctx.drawImage(imgpo, x, y)
+        break
+      case Puyo.Kind.IRON:
+        ctx.drawImage(imgpi, x, y)
+        break
+      case Puyo.Kind.WALL:
+        ctx.drawImage(imgpw, x, y)
+        break
+    }
   },
   openGifView () {
     state.gifView = true
@@ -602,5 +692,27 @@ export default {
   },
   toggleLoginView () {
     state.loginView = !state.loginView
+  },
+  updateHash () {
+    updateInfo()
   }
 }
+
+let imgback = new Image()
+imgback.src = require('../assets/puyo_field_back.png')
+let imgpr = new Image()
+imgpr.src = require('../assets/puyo_r.png')
+let imgpg = new Image()
+imgpg.src = require('../assets/puyo_g.png')
+let imgpb = new Image()
+imgpb.src = require('../assets/puyo_b.png')
+let imgpy = new Image()
+imgpy.src = require('../assets/puyo_y.png')
+let imgpp = new Image()
+imgpp.src = require('../assets/puyo_p.png')
+let imgpo = new Image()
+imgpo.src = require('../assets/puyo_o.png')
+let imgpi = new Image()
+imgpi.src = require('../assets/puyo_i.png')
+let imgpw = new Image()
+imgpw.src = require('../assets/wall01.png')

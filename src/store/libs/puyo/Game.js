@@ -122,6 +122,8 @@ class Game {
     this.statisticsMaxChain = 0
     this.statisticsMaxScore = 0
     this.statisticsMaxConcurrent = 0
+    this.statisticsAllClear = 0
+    this.statisticsCount = 0
   }
   axisPos () {
     return this.ops.pos
@@ -271,6 +273,11 @@ class Game {
     this.chain = 0
     this.score = 0
     this.sumScore = 0
+    this.statisticsMaxChain = 0
+    this.statisticsMaxConcurrent = 0
+    this.statisticsMaxScore = 0
+    this.statisticsAllClear = 0
+    this.statisticsCount = 0
     // history から field を再現
     this.field = new Puyo.Field()
     for (let i = 0; i < this.chart.size(); i++) {
@@ -285,17 +292,23 @@ class Game {
       setOpsToField(this.field, ch.x, ch.dir, this.next.get(i))
       if (!this.field.canFire()) continue
       this.score = 0
-      let i
-      for (i = 1; i < 20; i++) {
+      let ii
+      let count = 0
+      for (ii = 1; ii < 20; ii++) {
         let info = this.field.stepFire()
-        let score = calcScore(info.num, info.color, info.connections, i)
-        this.chain = i
+        let score = calcScore(info.num, info.color, info.connections, ii)
+        this.chain = ii
         this.score += score
         this.sumScore += score
+        count += info.num
+        if (this.statisticsMaxConcurrent <= info.num) this.statisticsMaxConcurrent = info.num
         this.field.fall()
         if (!this.field.canFire()) break
       }
-      if (this.statisticsMaxChain <= i) this.statisticsMaxChain = i
+      if (this.field.isAllClear()) this.statisticsAllClear++
+      if (this.statisticsMaxChain <= ii) this.statisticsMaxChain = ii
+      if (this.statisticsMaxScore <= this.score) this.statisticsMaxScore = this.score
+      this.statisticsCount = count
     }
     // 移動後の履歴状態に応じて処理
     let ch = this.chart.get(turnNum)

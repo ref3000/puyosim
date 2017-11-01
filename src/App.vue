@@ -15,6 +15,34 @@
         <tr><td>[1-8]</td><td>ぷよ種選択（編集モード）</td></tr>
         </table>
       </div>
+      <div class="statisticsArea">
+        <div>統計</div>
+        <div>最大連鎖：{{state.statisticsMaxChain}}連鎖</div>
+        <div>最大同時消し：{{state.statisticsMaxConcurrent}}個</div>
+        <div>最大得点：{{state.statisticsMaxScore}}点</div>
+        <div>合計消去ぷよ数:{{state.statisticsCount}}個</div>
+        <div>全消し回数：{{state.statisticsAllClear}}回</div>
+      </div>
+      <div class="nazoConfigArea">
+        <div>なぞぷよ条件</div>
+        <div>
+          Type:
+          <select v-model="state.nazoMode">
+            <option>未設定</option>
+            <option>全消し</option>
+            <option>連鎖</option>
+            <option>同時消し</option>
+            <option>個数</option>
+          </select>
+        </div>
+        <div v-if="state.nazoMode!=='未設定'">
+          <input type="number" min="1" style="width:30px" v-model="state.nazoTurn">手以内
+        </div>
+        <div v-if="state.nazoMode==='全消し'">全消しすべし</div>
+        <div v-if="state.nazoMode==='連鎖'"><input type="number" min="1" style="width:30px" v-model="state.nazoChain">連鎖すべし</div>
+        <div v-if="state.nazoMode==='同時消し'"><input type="number" min="1" style="width:30px" v-model="state.nazoConcurrent">個同時消しすべし</div>
+        <div v-if="state.nazoMode==='個数'"><input type="number" min="1" style="width:30px" v-model="state.nazoCount">個消すべし</div>
+      </div>
     </div>
     <div id="main_content">
       <div id="top">
@@ -23,6 +51,7 @@
         <div id="logout" v-if="state.isLogin && !state.isLoginWait" v-on:touchstart="loginClick" v-on:mousedown="loginClick">{{state.userName}}</div>
         <div class="loginTriangle" v-on:touchstart="loginClick" v-on:mousedown="loginClick"></div>
         <div id="status">{{state.statusStr}}</div>
+        <div id="nazoStatus" :style="state.nazoClear?'color:#ff0000':''">{{nazoStatusStr}}</div>
         <img id="editIcon" :class="{editIconActive: state.editView}" src="./assets/edit.png" v-on:touchstart="pushEditIcon" v-on:mousedown="pushEditIcon"></img>
         <img id="hun" :class="{openHamburger: state.hamburger}" src="./assets/hun02.png" v-on:touchstart="hamburger" v-on:mousedown="hamburger"></img>
       </div>
@@ -87,7 +116,7 @@
           <div id="chartDescription">現在のぷよ譜↓</div>
           <textarea readonly id="chartArea" v-model="chartURL"></textarea>
           <div id="gifView" v-if="state.gifView">
-            <img :src="state.gifSrc" style="margin-top: 10px"></img>
+            <img :src="state.gifSrc" style="margin-top: 5px"></img>
             <div v-if="state.gifSrc==null" style="position: absolute; top: 150px; left: 75px">画像生成中...</div>
             <a id="dl" v-if="state.gifSrc!=null" :href="state.gifSrc" download="chart.gif" style="margin-top: 5px">download</a>
           </div>
@@ -116,12 +145,6 @@
       </div>
     </div>
     <div id="right_content">
-      <div class="statisticsArea">
-        <div>統計</div>
-        <div>最大連鎖：{{state.statisticsMaxChain}}連鎖</div>
-        <div>最大同時消し：{{state.statisticsMaxConcurrent}}個</div>
-        <div>最大得点：{{state.statisticsMaxScore}}点</div>
-      </div>
     </div>
   </div>
 </template>
@@ -351,6 +374,18 @@ export default {
         }
       }
       return a
+    },
+    nazoStatusStr () {
+      if (this.state.nazoClear) return 'クリア！'
+      let prefix = '[' + this.state.nazoTurn + '手] '
+      switch (this.state.nazoMode) {
+        case '未設定': return ''
+        case '全消し': return prefix + '全消しすべし'
+        case '連鎖': return prefix + this.state.nazoChain + '連鎖すべし'
+        case '同時消し': return prefix + this.state.nazoConcurrent + '個同時に消すべし'
+        case '個数': return prefix + this.state.nazoCount + '個消すべし'
+      }
+      return ''
     }
   },
   watch: {
@@ -380,6 +415,24 @@ export default {
       if (checked) {
         store.createGif()
       }
+    },
+    'state.nazoMode': function () {
+      store.updateHash()
+    },
+    'state.nazoChain': function () {
+      store.updateHash()
+    },
+    'state.nazoTurn': function () {
+      store.updateHash()
+    },
+    'state.nazoCount': function () {
+      store.updateHash()
+    },
+    'state.nazoConcurrent': function () {
+      store.updateHash()
+    },
+    'state.nazoClear': function () {
+      store.updateHash()
     }
   },
   methods: {
@@ -658,6 +711,12 @@ export default {
   line-height: 28px;
 }
 
+#nazoStatus {
+  color: #666666;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 28px;
+}
 
 #hun {
   position: absolute;
@@ -692,6 +751,7 @@ export default {
   position: relative;
   width: 320px;
   height: 200px;
+  background-color: #ECFDFF;
 }
 
 #puyo-field {
@@ -991,10 +1051,10 @@ export default {
 #gifView {
   margin: 0;
   position: absolute;
-  top: -55px;
-  left: 10px;
-  width: 240px;
-  height: 460px;
+  top: -35px;
+  left: -2px;
+  width: 264px;
+  height: 450px;
   background-color:#ffffff;
 }
 
@@ -1051,10 +1111,19 @@ export default {
 
 .statisticsArea {
   position: relative;
-  margin-top: 30px;
+  margin-top: 10px;
   margin-left: 20px;
   width: 180px;
-  height: 200px;
+  height: 145px;
+  background-color: #ccdfff;
+}
+
+.nazoConfigArea {
+  position: relative;
+  margin-top: 10px;
+  margin-left: 20px;
+  width: 180px;
+  height: 100px;
   background-color: #ccdfff;
 }
 </style>
